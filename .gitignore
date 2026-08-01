@@ -34,5 +34,9 @@ Thumbs.db
 *.log
 logs/
 
+# --- データベース ---
+*.db
+*.sqlite3
+
 # --- テスト ---
 .test_*.db

@@ -1,0 +1,38 @@
+# --- Node.js ---
+node_modules/
+dist/
+.next/
+out/
+build/
+*.tsbuildinfo
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- 環境変数 ---
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+
+# --- IDE / OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# --- ログ ---
+*.log
+logs/
+
+# --- テスト ---
+.test_*.db

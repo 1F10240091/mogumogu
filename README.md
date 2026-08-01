@@ -120,9 +120,7 @@ mogumogu/
 ├── package.json              # モノレポ設定（npm workspaces）
 ├── docs/
 │   ├── proposal.md           # 提案書（背景・目的・機能）
-│   ├── design.md             # 詳細設計書（アーキテクチャ・API・DB）
-│   ├── assignment.md         # タスク割当表・開発スケジュール
-│   └── user-manual.md        # ユーザーマニュアル
+│   └── design.md             # 詳細設計書（アーキテクチャ・API・DB）
 ├── backend/
 │   ├── app/
 │   │   ├── main.py           # FastAPI エントリポイント
@@ -173,8 +171,38 @@ mogumogu/
 
 - [提案書](./docs/proposal.md) — プロジェクトの背景・目的・機能・市場分析
 - [詳細設計書](./docs/design.md) — アーキテクチャ・API・データベース設計
-- [タスク割当表](./docs/assignment.md) — メンバー別タスク・開発スケジュール
-- [ユーザーマニュアル](./docs/user-manual.md) — 画面ごとの使い方ガイド
+
+## 開発ルール
+
+### ブランチ割り当て
+
+リポジトリ: `https://github.com/1F10240091/mogumogu.git`
+
+```
+main
+├── feat/db-api      A担当（高橋櫂）: DBモデル・認証・お子様/アレルギー/好みAPI
+├── feat/ocr         B担当（田中琴乃）: 献立表OCR + パーサ + 保存API
+├── feat/ai-gen      C担当（大橋弘太郎）: AI献立生成API
+└── feat/frontend    D担当（経塚成夢）: フロントエンド一式
+```
+
+### 作業時のルール
+
+1. **main では作業しない**
+   各自、自分のブランチでだけ作業してください。最初に `git checkout feat/〇〇` を実行してから始めてください。
+   - A: `git checkout feat/db-api`
+   - B: `git checkout feat/ocr`
+   - C: `git checkout feat/ai-gen`
+   - D: `git checkout feat/frontend`
+
+2. **最初に必ず git pull する**
+   作業を始める前に必ず `git pull` を実行し、最新の状態にしてください。
+
+3. **勝手にマージしない**
+   自分のブランチの変更は `git push` までで止めてください。**プルリクエストを作成**し、統括担当が確認してからマージします。main への直接マージはしないでください。
+
+4. **マージの順番**
+   マージは A → B → C → D の順で行います。自分のブランチが完成したら「マージ可能」と連絡してください。
 
 ## ライセンス
 

@@ -5,7 +5,7 @@ from .database import engine
 
 models.Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="Hoiku Recipe API", version="0.1.0")
+app = FastAPI(title="MoguMogu API", version="0.1.0")
 
 
 @app.get("/health")

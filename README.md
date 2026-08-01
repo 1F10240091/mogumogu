@@ -1,4 +1,4 @@
-# Hoiku-Recipe（保育園児の親向け献立自動生成アプリ）
+# MoguMogu（保育園児の親向け献立自動生成アプリ）
 
 少子化が進む現代社会において、子育て世帯（特に共働き世帯）が抱える「毎日の食事準備」という
 時間的・精神的負担を、テクノロジーで軽減することを目的とした Web アプリケーションです。
@@ -116,7 +116,7 @@ python -m pytest tests -v
 ## プロジェクト構成
 
 ```
-hoiku-recipe/
+mogumogu/
 ├── package.json              # モノレポ設定（npm workspaces）
 ├── docs/
 │   ├── proposal.md           # 提案書（背景・目的・機能）

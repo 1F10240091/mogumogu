@@ -41,44 +41,15 @@ next-env.d.ts
 *.swp
 *.swo
 
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-env/
-venv/
-ENV/
-.venv
-pip-log.txt
-pip-delete-this-directory.txt
-.tox/
-.coverage
-.coverage.*
-coverage.xml
-*.cover
-.hypothesis/
-.pytest_cache/
-.mypy_cache/
-.dmypy.json
-dmypy.json
-.pyre/
-.ruff_cache/
-
-# Database
-*.db
-*.sqlite
-*.sqlite3
+# Git
+.git
+.gitignore
 
 # Docker
 .docker/
+Dockerfile
+docker-compose*.yml
 
-# Logs
-logs
-*.log
-
-# OS
-Thumbs.db
-ehthumbs.db
-Desktop.ini
+# Documentation
+README.md
+docs/

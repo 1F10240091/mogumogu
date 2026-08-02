@@ -1,16 +1,10 @@
 import uuid
+from datetime import date, datetime
+from enum import Enum as PyEnum
 
-from sqlalchemy import (
-    Column,
-    Date,
-    DateTime,
-    ForeignKey,
-    MetaData,
-    String,
-    Uuid,
-)
-from sqlalchemy.orm import DeclarativeBase, relationship
-from sqlalchemy.sql import func
+from sqlalchemy import Enum, ForeignKey, MetaData, String, Text, Uuid, func
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from sqlalchemy.types import DateTime
 
 naming_convention = {
     "ix": "ix_%(column_0_label)s",
@@ -30,18 +24,18 @@ class Base(DeclarativeBase):
 
 
 class TimestampMixin:
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class User(Base, TimestampMixin):
     __tablename__ = "users"
 
-    id = Column(Uuid, primary_key=True, default=new_uuid)
-    email = Column(String, unique=True, index=True, nullable=False)
-    hashed_password = Column(String, nullable=False)
-    display_name = Column(String, nullable=False)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=new_uuid)
+    email: Mapped[str] = mapped_column(String, unique=True, index=True)
+    hashed_password: Mapped[str] = mapped_column(String)
+    display_name: Mapped[str] = mapped_column(String)
 
-    children = relationship(
+    children: Mapped[list["Child"]] = relationship(
         "Child", back_populates="user", cascade="all, delete-orphan"
     )
 
@@ -49,19 +43,19 @@ class User(Base, TimestampMixin):
 class Child(Base, TimestampMixin):
     __tablename__ = "children"
 
-    id = Column(Uuid, primary_key=True, default=new_uuid)
-    user_id = Column(
-        Uuid, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=new_uuid)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="CASCADE"), index=True
     )
-    name = Column(String, nullable=False)
-    birth_date = Column(Date, nullable=True)
-    gender = Column(String, nullable=True)
+    name: Mapped[str] = mapped_column(String)
+    birth_date: Mapped[date | None] = mapped_column()
+    gender: Mapped[str | None] = mapped_column(String)
 
-    user = relationship("User", back_populates="children")
-    allergies = relationship(
+    user: Mapped["User"] = relationship("User", back_populates="children")
+    allergies: Mapped[list["Allergy"]] = relationship(
         "Allergy", back_populates="child", cascade="all, delete-orphan"
     )
-    preferences = relationship(
+    preferences: Mapped[list["Preference"]] = relationship(
         "Preference", back_populates="child", cascade="all, delete-orphan"
     )
 
@@ -69,23 +63,50 @@ class Child(Base, TimestampMixin):
 class Allergy(Base):
     __tablename__ = "allergies"
 
-    id = Column(Uuid, primary_key=True, default=new_uuid)
-    child_id = Column(
-        Uuid, ForeignKey("children.id", ondelete="CASCADE"), nullable=False, index=True
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=new_uuid)
+    child_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("children.id", ondelete="CASCADE"), index=True
     )
-    ingredient = Column(String, nullable=False)
+    ingredient: Mapped[str] = mapped_column(String)
 
-    child = relationship("Child", back_populates="allergies")
+    child: Mapped["Child"] = relationship("Child", back_populates="allergies")
 
 
 class Preference(Base):
     __tablename__ = "preferences"
 
-    id = Column(Uuid, primary_key=True, default=new_uuid)
-    child_id = Column(
-        Uuid, ForeignKey("children.id", ondelete="CASCADE"), nullable=False, index=True
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=new_uuid)
+    child_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("children.id", ondelete="CASCADE"), index=True
     )
-    ingredient = Column(String, nullable=False)
-    mode = Column(String, nullable=False)  # exclude / improve
+    ingredient: Mapped[str] = mapped_column(String)
+    mode: Mapped[str] = mapped_column(String)  # exclude / improve
 
-    child = relationship("Child", back_populates="preferences")
+    child: Mapped["Child"] = relationship("Child", back_populates="preferences")
+
+
+class RecipeCategory(str, PyEnum):
+    MAIN_DISH = "main_dish"
+    SIDE_DISH = "side_dish"
+    SOUP = "soup"
+    RICE = "rice"
+    NOODLE = "noodle"
+    DESSERT = "dessert"
+    OTHER = "other"
+
+
+class Recipe(Base, TimestampMixin):
+    __tablename__ = "recipes"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=new_uuid)
+    title: Mapped[str] = mapped_column(String, index=True)
+    description: Mapped[str | None] = mapped_column(Text)
+    category: Mapped[RecipeCategory] = mapped_column(Enum(RecipeCategory), index=True)
+    ingredients: Mapped[str] = mapped_column(Text)  # JSON string
+    instructions: Mapped[str] = mapped_column(Text)
+    cooking_time_minutes: Mapped[str | None] = mapped_column(String)
+    servings: Mapped[str | None] = mapped_column(String)
+    image_url: Mapped[str | None] = mapped_column(String)
+    source_url: Mapped[str | None] = mapped_column(String)
+    tags: Mapped[str | None] = mapped_column(Text)  # JSON string array
+    is_public: Mapped[str] = mapped_column(String, default="true")

@@ -82,7 +82,7 @@ jobs:
         run: npm run test --workspace=frontend
 
       - name: Upload frontend coverage
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v7
         with:
           flags: frontend
           files: ./frontend/coverage/lcov.info
@@ -129,7 +129,7 @@ jobs:
           ACCESS_TOKEN_EXPIRE_MINUTES: 30
 
       - name: Upload backend coverage
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v7
         with:
           flags: backend
           files: ./backend/coverage.xml

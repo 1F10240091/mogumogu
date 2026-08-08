@@ -19,7 +19,7 @@ jobs:
           cache-dependency-path: package-lock.json
       - run: npm ci
       - run: npm run lint --workspace frontend
-      - run: npx --prefix frontend tsc --noEmit
+      - run: npm run typecheck --workspace frontend
       - run: npm run build --workspace frontend
 
   backend:

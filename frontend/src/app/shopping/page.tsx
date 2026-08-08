@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import AppNav from "@/components/AppNav";
+import RequireAuth from "@/components/RequireAuth";
 import { api, type ShoppingItem } from "@/lib/api";
 
 export default function ShoppingPage() {
@@ -50,7 +51,8 @@ export default function ShoppingPage() {
   };
 
   return (
-    <main className="main">
+    <RequireAuth>
+      <main className="main">
       <AppNav />
       <div className="container" style={{ paddingBottom: 80 }}>
         <div className="page-header">
@@ -81,7 +83,9 @@ export default function ShoppingPage() {
                   <div>
                     <p className="list__item-title">{item.name}</p>
                     {item.needed && (
-                      <p className="list__item-text">必要量: {item.needed}</p>
+                      <p className="list__item-text">
+                        必要合計分量: {item.needed}
+                      </p>
                     )}
                     {item.source_recipes && item.source_recipes.length > 0 && (
                       <p className="list__item-text">
@@ -95,7 +99,9 @@ export default function ShoppingPage() {
           </div>
         )}
 
-        <h2 style={{ marginTop: 40 }}>冷蔵庫の在庫</h2>
+        <h2 className="section-heading" style={{ marginTop: 40, border: "none" }}>
+          冷蔵庫の在庫
+        </h2>
         <div className="card">
           <div className="input-row" style={{ marginBottom: 8 }}>
             <input
@@ -132,6 +138,7 @@ export default function ShoppingPage() {
           )}
         </div>
       </div>
-    </main>
+      </main>
+    </RequireAuth>
   );
 }

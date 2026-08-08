@@ -6,8 +6,9 @@ export default function Home() {
     <div className={styles.page}>
       <header className={styles.header}>
         <div className={styles.headerInner}>
-          <span className={styles.logo}>Hoiku-Recipe</span>
+          <span className={styles.logo}>MoguMogu</span>
           <nav className={styles.nav}>
+            <Link href="/recipe-search">レシピ検索</Link>
             <Link href="/login">ログイン</Link>
             <Link href="/register" className={styles.registerLink}>
               新規登録
@@ -52,7 +53,7 @@ export default function Home() {
       </main>
 
       <footer className={styles.footer}>
-        <p>Hoiku-Recipe — 保育園児の親向け献立自動生成アプリ</p>
+        <p>MoguMogu — 保育園児の親向け献立自動生成アプリ</p>
       </footer>
     </div>
   );

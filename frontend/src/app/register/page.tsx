@@ -34,6 +34,19 @@ export default function RegisterPage() {
   return (
     <main className="auth-page">
       <div className="auth-card">
+        <Link
+          href="/"
+          style={{
+            display: "block",
+            textAlign: "center",
+            fontSize: 22,
+            fontWeight: "bold",
+            color: "var(--color-primary-dark)",
+            marginBottom: 16,
+          }}
+        >
+          もぐもぐ
+        </Link>
         <h1 className="auth-card__title">新規登録</h1>
         <p className="auth-card__subtitle">
           アカウントを作成して献立づくりを始めましょう

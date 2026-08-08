@@ -36,12 +36,27 @@ async def upload_menu(
     except OCRProcessingError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
 
+    # 日付別に構造化して保存（各日の給食と被らない献立提案に利用）
+    entries = parse_menu_text(result.text)
+    dishes_by_date = [
+        {
+            "month": e.month,
+            "day": e.day,
+            "weekday": e.weekday,
+            "dishes": e.dishes,
+        }
+        for e in entries
+        if e.dishes
+    ]
     dishes = _collect_dishes(result.text)
     menu = NurseryMenu(
         user_id=user.id,
         date=date.today(),
         menu_text=result.text,
-        ingredients={"dishes": dishes},
+        ingredients={
+            "dishes": dishes,
+            "dishes_by_date": dishes_by_date,
+        },
     )
     db.add(menu)
     db.commit()

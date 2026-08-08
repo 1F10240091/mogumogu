@@ -3,14 +3,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { api, isDemoMode } from "@/lib/api";
+import { api } from "@/lib/api";
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [demo, setDemo] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,24 +23,22 @@ export default function LoginPage() {
     }
   };
 
-  const handleDemoLogin = async () => {
-    setError(null);
-    setDemo(true);
-    try {
-      const res = await api.login("demo@example.com", "password123");
-      localStorage.setItem("token", res.access_token);
-      router.push("/dashboard");
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "デモログインに失敗しました",
-      );
-      setDemo(false);
-    }
-  };
-
   return (
     <main className="auth-page">
       <div className="auth-card">
+        <Link
+          href="/"
+          style={{
+            display: "block",
+            textAlign: "center",
+            fontSize: 22,
+            fontWeight: "bold",
+            color: "var(--color-primary-dark)",
+            marginBottom: 16,
+          }}
+        >
+          もぐもぐ
+        </Link>
         <h1 className="auth-card__title">ログイン</h1>
         <p className="auth-card__subtitle">もぐもぐで毎日の献立づくりを楽に</p>
         <form
@@ -68,16 +65,6 @@ export default function LoginPage() {
           <button type="submit" className="button button--full">
             ログイン
           </button>
-          {isDemoMode() && (
-            <button
-              type="button"
-              onClick={handleDemoLogin}
-              disabled={demo}
-              className="button button--secondary button--full"
-            >
-              {demo ? "ログイン中..." : "デモを試す（バックエンド不要）"}
-            </button>
-          )}
         </form>
         <p className="auth-card__footer">
           アカウントをお持ちでない方は <Link href="/register">新規登録</Link>

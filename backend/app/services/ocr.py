@@ -1,18 +1,22 @@
 """OCR サービス。
 
 保育園から配布される献立表（PDF / 画像）からテキストを抽出する。
-- PDF: pypdf によるテキスト抽出（デジタル生成の PDF 向け）
-- 画像: easyocr による日本語 OCR（スキャン画像向け、遅延ロード）
-- スキャン PDF: 各ページを画像化して easyocr で読み取る（全ページ対応）
+- PDF: pypdf によるテキスト抽出（デジタル生成の PDF 向け、OCR 不要）
+- 画像: Gemini の OpenAI 互換 API（画像を base64 で渡して文字列化・遅延ロード）
+- スキャン PDF: 各ページを画像化して Gemini で読み取る（全ページ対応）
 
-将来の AI 連携（Xiaomi MiMo）に差し替えられるよう、共通インターフェースを
-持たせる。
+API キー未設定時は画像系の抽出ができず、OCRProcessingError を返す。
 """
 
 from __future__ import annotations
 
+import base64
 import io
 from dataclasses import dataclass
+
+import httpx
+
+from app.config import get_settings
 
 ALLOWED_PDF_TYPES = {"application/pdf"}
 ALLOWED_IMAGE_TYPES = {"image/png", "image/jpeg", "image/jpg", "image/webp"}
@@ -80,35 +84,43 @@ def _extract_from_pdf(data: bytes) -> OCRResult:
 def _extract_from_scan_pdf(data: bytes, page_count: int) -> OCRResult:
     """スキャン PDF の全ページを画像化して OCR する。"""
     try:
-        from pdf2image import convert_from_bytes
+        import pypdfium2 as pdfium
     except ImportError as exc:
         raise OCRProcessingError(
-            "スキャン PDF の読み取りには pdf2image が必要です。"
-            " `pip install pdf2image` を実行してください。"
+            "スキャン PDF の読み取りには pypdfium2 が必要です。"
+            " `pip install pypdfium2` を実行してください。"
         ) from exc
 
     try:
-        images = convert_from_bytes(data, dpi=200)
+        pdf = pdfium.PdfDocument(data)
+        results: list[str] = []
+        for i in range(len(pdf)):
+            page = pdf[i]
+            bitmap = page.render(scale=200 / 72, rotation=0)  # 200 DPI 相当
+            pil_image = bitmap.to_pil()
+            result = _extract_from_image(pil_image)
+            results.append(result.text)
     except Exception as exc:  # noqa: BLE001
         raise OCRProcessingError(f"PDF の画像変換に失敗しました: {exc}") from exc
 
-    results: list[str] = []
-    for image in images:
-        result = _extract_from_image(image)
-        results.append(result.text)
-
     text = "\n".join(r for r in results if r).strip()
     if not text:
-        return OCRResult(text="(スキャン画像からはテキストを抽出できませんでした)", engine="easyocr")
-    return OCRResult(text=text, engine="easyocr", raw_pages=results)
+        return OCRResult(text="(スキャン画像からはテキストを抽出できませんでした)", engine="gemini")
+    return OCRResult(text=text, engine="gemini", raw_pages=results)
 
 
 def _extract_from_image(image_input) -> OCRResult:
-    """画像（PIL Image または bytes）から OCR する。"""
+    """画像（PIL Image または bytes）を Gemini で OCR する（遅延呼び出し）。"""
+    settings = get_settings()
+    if not settings.ai_api_key:
+        raise OCRProcessingError(
+            "画像 OCR には AI_API_KEY の設定が必要です。backend/.env に AI_API_KEY を設定してください。"
+            " デジタル PDF は設定不要でそのまま読み取れます。"
+        )
+
+    # 入力（PIL Image / bytes）を JPEG のバイト列に統一する
     try:
         from PIL import Image
-        import numpy as np
-        import easyocr
 
         if isinstance(image_input, bytes):
             image = Image.open(io.BytesIO(image_input))
@@ -116,18 +128,45 @@ def _extract_from_image(image_input) -> OCRResult:
             image = image_input
         if image.mode != "RGB":
             image = image.convert("RGB")
-        array = np.array(image)
-
-        # モデルは初回呼び出し時にダウンロードされる。遅延ロードで必要な時のみ起動する。
-        reader = easyocr.Reader(["ja", "en"], gpu=False, verbose=False)
-        lines = reader.readtext(array, detail=0, paragraph=True)
-        text = "\n".join(line.strip() for line in lines if line.strip())
-    except ImportError as exc:
-        raise OCRProcessingError(
-            "画像 OCR の依存ライブラリ（easyocr / Pillow / numpy）がインストールされていません。"
-            " `pip install -r requirements-ocr.txt` を実行してください。"
-        ) from exc
+        buf = io.BytesIO()
+        image.save(buf, format="JPEG")
+        img_bytes = buf.getvalue()
     except Exception as exc:  # noqa: BLE001
-        raise OCRProcessingError(f"画像の OCR 処理に失敗しました: {exc}") from exc
+        raise OCRProcessingError(f"画像の変換に失敗しました: {exc}") from exc
 
-    return OCRResult(text=text, engine="easyocr")
+    prompt = (
+        "保育園の献立表です。画像内の日付・曜日・料理名などを漏れなく日本語で抽出してください。\n"
+        "段落や並び・行の区切りは改行で表現してください。料理名は『・』で区切ってください。\n"
+        "画像中にテキストが無い場合は空文字列を返してください。"
+    )
+    payload = {
+        "model": settings.ai_model,
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt},
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:image/jpeg;base64,{base64.b64encode(img_bytes).decode()}"},
+                    },
+                ],
+            }
+        ],
+    }
+    headers = {
+        "Authorization": f"Bearer {settings.ai_api_key}",
+        "Content-Type": "application/json",
+    }
+    try:
+        with httpx.Client(timeout=settings.ai_timeout_seconds) as client:
+            resp = client.post(f"{settings.ai_base_url.rstrip('/')}/chat/completions", headers=headers, json=payload)
+            resp.raise_for_status()
+            content = resp.json()["choices"][0]["message"]["content"]
+    except httpx.HTTPError as exc:
+        raise OCRProcessingError(f"AI 画像読み取りに失敗しました: {exc}") from exc
+    except (KeyError, IndexError) as exc:
+        raise OCRProcessingError("AI の応答が不正です") from exc
+
+    text = "\n".join(line.strip() for line in content.splitlines() if line.strip())
+    return OCRResult(text=text, engine="gemini")

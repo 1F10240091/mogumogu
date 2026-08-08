@@ -3,7 +3,50 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import AppNav from "@/components/AppNav";
+import RequireAuth from "@/components/RequireAuth";
 import { api, type SuggestedMeal } from "@/lib/api";
+
+function MealDishes({ meal }: { meal: SuggestedMeal }) {
+  const ingredients = (meal.ingredients ?? {}) as {
+    dishes?: string[];
+    recipe_ids?: string[];
+  };
+  const dishes = ingredients.dishes ?? [];
+  const recipeIds = ingredients.recipe_ids ?? [];
+
+  if (dishes.length === 0) {
+    return (
+      <pre
+        style={{ whiteSpace: "pre-wrap", fontFamily: "inherit", margin: 0 }}
+      >
+        {meal.menu_text}
+      </pre>
+    );
+  }
+
+  return (
+    <ul className="meal-dishes" style={{ listStyle: "none", margin: 0 }}>
+      {dishes.map((dish, i) => {
+        const recipeId = recipeIds[i];
+        return (
+          <li key={`${dish}-${i}`} className="meal-dish">
+            {recipeId ? (
+              <Link href={`/recipe-master/${recipeId}`}>
+                <span className="meal-dish__label">{dish}</span>
+              </Link>
+            ) : (
+              <Link
+                href={`/recipe-search?keyword=${encodeURIComponent(dish)}`}
+              >
+                <span className="meal-dish__label">{dish}</span>
+              </Link>
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
 
 export default function RecipesPage() {
   const [recipes, setRecipes] = useState<SuggestedMeal[]>([]);
@@ -17,13 +60,15 @@ export default function RecipesPage() {
   }, []);
 
   return (
-    <main className="main">
+    <RequireAuth>
+      <main className="main">
       <AppNav />
       <div className="container" style={{ paddingBottom: 80 }}>
         <div className="page-header">
           <h1 className="page-header__title">レシピ・買い物リスト</h1>
           <p className="page-header__subtitle">
-            AI が提案した献立の詳細を確認できます。
+            AI が提案した献立の詳細を確認できます。料理名をクリックすると
+            レシピの作り方が見られます。
           </p>
         </div>
         {loading ? (
@@ -39,19 +84,12 @@ export default function RecipesPage() {
           recipes.map((recipe) => (
             <div className="card" key={recipe.id}>
               <h2>{recipe.date}</h2>
-              <pre
-                style={{
-                  whiteSpace: "pre-wrap",
-                  fontFamily: "inherit",
-                  margin: 0,
-                }}
-              >
-                {recipe.menu_text}
-              </pre>
-            </div>
-          ))
-        )}
+              <MealDishes meal={recipe} />
+</div>
+            ))
+          )}
       </div>
-    </main>
+      </main>
+      </RequireAuth>
   );
 }

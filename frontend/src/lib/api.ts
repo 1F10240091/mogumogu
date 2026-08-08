@@ -1,6 +1,33 @@
 // バックエンド API クライアント
 const API_BASE = "/api/v1";
 
+// FastAPI のエラーレスポンスを日本語のわかりやすいメッセージに変換する
+function friendlyError(body: string, status: number): string {
+  if (status === 401) return "メールアドレスまたはパスワードが正しくありません";
+  if (status === 403) return "この操作を行う権限がありません";
+  if (status === 404) return "対象が見つかりませんでした";
+  if (status === 409) return "既に登録されています";
+  if (status === 500) return "サーバーでエラーが発生しました。時間をおいて再度お試しください";
+
+  try {
+    const parsed = JSON.parse(body);
+    const detail = parsed?.detail;
+    if (typeof detail === "string") return detail;
+    if (Array.isArray(detail) && detail.length > 0) {
+      const first = detail[0];
+      if (first?.loc?.includes("email")) return "メールアドレスの形式が正しくありません";
+      if (first?.loc?.includes("password")) return "パスワードを確認してください";
+      return "入力内容に誤りがあります";
+    }
+    if (typeof detail === "object" && detail !== null) {
+      return "入力内容に誤りがあります";
+    }
+  } catch {
+    // JSON でない場合はそのまま本文を返す
+  }
+  return body || "通信に失敗しました";
+}
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = {
     ...(options.headers as Record<string, string>),
@@ -19,7 +46,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(body || `Request failed: ${res.status}`);
+    throw new Error(friendlyError(body, res.status));
   }
   return res.json() as Promise<T>;
 }
@@ -232,9 +259,5 @@ const realApi = {
   },
 };
 
-import { demoApi } from "./demo-api";
-
-// デモモード判定（NEXT_PUBLIC_DEMO_MODE=true でバックエンドなしのデモとして動作）
-export const isDemoMode = () => process.env.NEXT_PUBLIC_DEMO_MODE === "true";
-
-export const api = (isDemoMode() ? demoApi : realApi) as typeof realApi;
+// 常時バックエンド API を利用する（デモモードは廃止）
+export const api = realApi;

@@ -1,4 +1,4 @@
-# Hoiku-Recipe（保育園児の親向け献立自動生成アプリ）
+# MoguMogu（保育園児の親向け献立自動生成アプリ）
 
 少子化が進む現代社会において、子育て世帯（特に共働き世帯）が抱える「毎日の食事準備」という
 時間的・精神的負担を、テクノロジーで軽減することを目的とした Web アプリケーションです。
@@ -22,7 +22,7 @@
 |------|------|
 | **献立表の OCR 読み取り** | 保育園から配布された献立表（PDF / 画像）をアプリに読み込み、メニュー名を自動でデータ化（スキャン PDF は全ページ画像 OCR にフォールバック） |
 | **子ども情報の登録** | 子どもの年齢・アレルギー・好き嫌いをデータベースとして一元管理・編集 |
-| **AI 献立自動提案** | 園の昼食・在庫・アレルギー・好き嫌い・前日の夕食を考慮し、レシピ DB から夕食献立を 1〜7 日分自動生成（Xiaomi MiMo / ルールベース） |
+| **AI 献立自動提案** | 園の昼食・在庫・アレルギー・好き嫌い・前日の夕食を考慮し、レシピ DB から夕食献立を 1〜7 日分自動生成（Gemini / ルールベース） |
 | **レシピ表示** | 提案された献立のレシピ（使用食品・作り方）を表示 |
 | **買い物リスト生成** | 提案献立に必要な食材から在庫を差し引いた不足食材の買い物リストを自動作成 |
 | **フィードバック収集** | ユーザーテスト・学祭アンケート用の評価（1〜5）・コメント投稿 |
@@ -35,7 +35,7 @@
 | バックエンド | FastAPI（Python） |
 | データベース | PostgreSQL（本番）/ SQLite（開発） |
 | BaaS | Supabase |
-| AI | Xiaomi MiMo |
+| AI | Gemini（OpenAI 互換 API） |
 | デプロイ | Vercel |
 | 開発環境 | Node.js / Python / GitHub / Figma / ESLint / Prettier |
 
@@ -44,10 +44,24 @@
 | 要件 | バージョン |
 |------|-----------|
 | Node.js | 18 以上 |
-| Python | 3.10 以上 |
-| OS | Windows / macOS / Linux |
+| Python | **3.12**（`backend/.venv` は `py -3.12` で作成） |
+| OS | Windows（推奨。起動スクリプトは Windows 向け）|
+
+> 注意: `npm run setup:backend` は `py -3.12` を呼ぶため、Python 3.12（py ランチャー）をインストールしてください。
+> 画像 OCR には Gemini の API キーが必要です（後述の「画像 OCR・AI 献立生成を有効にする」を参照）。
 
 ## クイックスタート
+
+### 0. 事前準備（git clone 後に初回のみ）
+
+```bash
+# 1) フロントエンドの環境変数ファイルを作成（未作成の場合）
+cp frontend/.env.example frontend/.env.local
+# Windows: copy frontend\.env.example frontend\.env.local
+
+# 2) バックエンドの環境変数ファイル（開発は任意。作らない場合はデフォルトで動作）
+#    cp backend/.env.example backend/.env   （Windows: copy backend\.env.example backend\.env）
+```
 
 ### 1. セットアップ
 
@@ -55,7 +69,9 @@
 npm run setup
 ```
 
-フロントエンド（npm install）とバックエンド（Python venv + pip install）を同時にセットアップします。
+フロントエンド（npm install）とバックエンド（Python venv 3.12 + pip install）を同時にセットアップします。
+Python を複数入れている環境では `.venv` が誤った Python を参照することがあるため、
+`backend/.venv/pyvenv.cfg` の `home` が `...\Python312` を指していることを確認してください。
 
 ### 2. 開発サーバーを起動
 
@@ -66,57 +82,90 @@ npm run dev
 - フロントエンド: http://localhost:3000
 - バックエンド API: http://localhost:8000 （Swagger UI: http://localhost:8000/docs）
 
-## デモモード（バックエンド不要）
+レシピ検索・レシピ詳細はログイン不要でアクセスできます（バックエンドの読み取り専用 API を公開）。
+その他の機能（献立・買い物・フィードバックなど）はログイン後に利用できます。
 
-バックエンドを起動せずに、フロントエンドだけで全機能を試すことができます。
-デモモードではモック API が動作し、データはブラウザの localStorage に保存されます。
+### 3. 開発環境の注意
 
-```bash
-# frontend/.env.local に追記
-NEXT_PUBLIC_DEMO_MODE=true
-```
+- バックエンドの `.venv` は **Python 3.12（標準の py ランチャー）** で作成されます。
+  別の Python（例: 画像生成用の複数 Python 環境）が PATH の先頭にある場合、
+  `npm run setup:backend` が正しい環境を作れないため、`py -3.12` が使えることを確認してください。
+- バックエンド / フロントエンドは個別に起動できます:
+  ```bash
+  npm run start:backend   # scripts/start-backend.bat（uvicorn をバックグラウンド起動）
+  npm run start:frontend  # scripts/start-frontend.bat（Next.js をバックグラウンド起動）
+  ```
 
-ログイン画面の「デモを試す」ボタンから、ワンクリックでデモログインできます
-（あらかじめサンプルデータが用意されています）。デモモード中はどのメールアドレス・
-パスワードでもログインできます。
+### 4. 画像 OCR・AI 献立生成を有効にする
 
-> デモモードは評価・デモ用途のためのものです。本番利用では使用しないでください。
+デフォルトのインストールでは **デジタル PDF のテキスト抽出**（pypdf）が利用できます。
+**画像ファイル（PNG / JPEG）の読み取り** と **AI 献立生成** には Google の
+**Gemini（OpenAI 互換 API）** を使います。無料の API キーは
+[Aistudio](https://aistudio.google.com) で取得できます（Google アカウント必須）。
+
+1. `backend/.env` に API キーを設定:
+   ```bash
+   AI_API_KEY=あなたのキー
+   AI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
+   AI_MODEL=gemini-2.5-flash
+   ```
+2. スキャン済み PDF を画像化する場合は軽量依存のみ追加:
+   ```bash
+   cd backend
+   .venv\Scripts\pip install -r requirements-ocr.txt
+   ```
+   （easyocr / PyTorch は不要。API キー未設定でもアプリは動作し、献立生成はルールベース・画像 OCR はエラーになります）
+
+> 注意: 画像を外部（Google）に送信します。機密情報を含む献立表を扱う場合はご注意ください。
 
 ## NPM Scripts
 
 | コマンド | 内容 |
 |---------|------|
 | `npm run setup` | フロント・バック同時セットアップ |
-| `npm run dev` | フロント・バック同時起動 |
+| `npm run dev` | フロント・バック同時起動（開発） |
 | `npm run dev:frontend` | フロントエンドのみ起動 |
 | `npm run dev:backend` | バックエンドのみ起動 |
+| `npm run start:backend` / `start:frontend` | バックグラウンド起動（bat） |
 | `npm run build` | フロントエンドのプロダクションビルド |
 | `npm run lint` | ESLint 実行 |
+| `npm run test` | バックエンドの pytest 実行 |
 
 ## テスト
 
-バックエンドの API テストは pytest で実行します（認証・お子様・レシピ・献立生成・買い物リスト・献立表 OCR・セキュリティ・フィードバックの 40 件）。
+バックエンドの API テストは pytest で実行します（認証・お子様・レシピ・献立生成・買い物リスト・献立表 OCR・セキュリティ・フィードバックの 55 件）。
 
 ```bash
-cd backend
-pip install -r requirements-dev.txt
-python -m pytest tests -v
+npm run test
 ```
+
+## 本番（デプロイ）時の必須設定
+
+`APP_ENV=production` でバックエンドを起動する場合、起動時に以下を検証し、不備があればエラーで停止します（`backend/app/config.py`）。
+
+| 項目 | 要件 |
+|------|------|
+| `JWT_SECRET_KEY` | 32 文字以上のランダム値（`.env` で設定。デフォルト値はエラー） |
+| `CORS_ORIGINS` | localhost を含めない（本番オリジンを指定） |
+| `DATABASE_URL` | SQLite 禁止（PostgreSQL などの本番 DB を指定） |
+
+設定例は `backend/.env.example` を参照してください。`.env` は git 管理外です。
 
 ## セキュリティ対策
 
 | 対策 | 内容 |
 |------|------|
 | パスワード | bcrypt でハッシュ化。強度要件（8 文字以上・英字と数字を含む）をバックエンドとフロントの両方で検証 |
-| JWT | 発行者（iss）・有効期限（exp）を検証。秘密鍵は環境変数で設定 |
+| JWT | 発行者（iss）・有効期限（exp）を検証。秘密鍵は設定で必須化（本番はデフォルト禁止） |
 | レート制限 | ログイン・登録への連続試行を IP ごとに制限（デフォルト 5 回 / 60 秒） |
 | 入力検証 | Pydantic / EmailStr による型・長さ・範囲のバリデーション |
 | DB アクセス | SQLAlchemy ORM 使用により SQL インジェクションを防止 |
+| レシピ公開 | バックエンドの読み取り専用エンドポイントのみ公開（レシピ検索・詳細はログイン不要） |
 
 ## プロジェクト構成
 
 ```
-hoiku-recipe/
+MoguMogu/
 ├── package.json              # モノレポ設定（npm workspaces）
 ├── docs/
 │   ├── proposal.md           # 提案書（背景・目的・機能）
@@ -145,10 +194,10 @@ hoiku-recipe/
 │   │       ├── menu_parser.py # 献立テキスト構造化
 │   │       ├── menu_generator.py # AI 献立生成
 │   │       ├── shopping_list.py # 買い物リスト集計
-│   │       └── seed_data.py  # レシピシード 23 件
+│   │       └── seed_data.py  # レシピシード 29 件
 │   ├── tests/                # pytest テスト
 │   ├── requirements.txt
-│   ├── requirements-ocr.txt  # easyocr 等（画像 OCR のみ）
+│   ├── requirements-ocr.txt  # pypdfium2（スキャン PDF の画像化のみ）
 │   └── requirements-dev.txt  # pytest 等
 └── frontend/
     ├── src/
@@ -160,6 +209,8 @@ hoiku-recipe/
     │   │   ├── dashboard/    # お子様・プロフィール管理
     │   │   ├── meal-plan/    # AI 献立生成画面
     │   │   ├── menus/        # 献立表 OCR 取り込み
+    │   │   ├── recipe-search/ # レシピ検索（ログイン不要）
+    │   │   ├── recipe-master/[id] # レシピ詳細（ログイン不要）
     │   │   ├── recipes/      # 提案献立一覧
     │   │   ├── shopping/     # 買い物リスト・冷蔵庫
     │   │   └── feedback/     # フィードバック

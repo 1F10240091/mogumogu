@@ -1,5 +1,7 @@
-"""レシピマスタ API（一覧・検索・作成・更新・削除）。"""
+"""レシピマスタ API（一覧・検索・作成・更新・削除）。
 
+読み取り系（一覧・検索・詳細）はログイン不要で利用できる。
+"""
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
@@ -13,7 +15,7 @@ router = APIRouter(prefix="/recipe-master", tags=["recipe-master"])
 
 @router.get("", response_model=list[RecipeResponse])
 def list_recipes(
-    meal_type: str | None = None, user=Depends(get_current_user), db: Session = Depends(get_db)
+    meal_type: str | None = None, db: Session = Depends(get_db)
 ) -> list[Recipe]:
     query = db.query(Recipe)
     if meal_type:
@@ -29,7 +31,6 @@ def search_recipes(
     max_cook_time: int | None = Query(default=None, ge=1, description="最大調理時間（分）"),
     page: int = Query(default=1, ge=1),
     per_page: int = Query(default=20, ge=1, le=100),
-    user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> RecipeSearchResponse:
     query = db.query(Recipe)
@@ -86,7 +87,7 @@ def create_recipe(payload: RecipeCreate, user=Depends(get_current_user), db: Ses
 
 
 @router.get("/{recipe_id}", response_model=RecipeResponse)
-def get_recipe(recipe_id: str, user=Depends(get_current_user), db: Session = Depends(get_db)) -> Recipe:
+def get_recipe(recipe_id: str, db: Session = Depends(get_db)) -> Recipe:
     recipe = db.query(Recipe).filter(Recipe.id == recipe_id).first()
     if recipe is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="レシピが見つかりません")

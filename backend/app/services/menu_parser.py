@@ -11,7 +11,7 @@ import re
 from dataclasses import dataclass, field
 
 _DATE_PATTERN = re.compile(r"(\d{1,2})[/.月](\d{1,2})日?(?:[\(（]\s*([月火水木金土日祝])\s*[\)）])?")
-_LINE_SPLIT_PATTERN = re.compile(r"[・、,，\n\r]+")
+_LINE_SPLIT_PATTERN = re.compile(r"[・、,，\n\r\s]+")
 
 
 @dataclass
@@ -69,14 +69,18 @@ def _extract_dishes(line: str, start: int) -> list[str]:
     """献立行から料理名を分解する。
 
     「8/1(金) 昼食: ごはん・ハンバーグ・野菜スープ」のような行から、
-    区切り文字（・、/）で料理名を抽出する。
+    区切り文字（・、/ 空白）で料理名を抽出する。
     """
     tail = line[start:].strip()
-    # 「昼食:」「昼食：」「昼食」のようなラベルを除去
+    # 「昼食:」「昼食：」のようなラベルを除去
     colon_match = re.match(r"^[^\s:：]*[:：]\s*", tail)
     if colon_match:
         tail = tail[colon_match.end():]
     else:
-        tail = re.sub(r"^[^\s:：]+", "", tail).strip()
+        # コロン無しの行は先頭の既知ラベル（昼食・夕食・給食・朝食・おやつ）のみ除去
+        # そうしないと「8/3 ごはん みそ汁」の「ごはん」が消えてしまう。
+        label_match = re.match(r"^(昼食|夕食|給食|朝食|おやつ|ランチ)\s*", tail)
+        if label_match:
+            tail = tail[label_match.end():]
     items = [item for item in _LINE_SPLIT_PATTERN.split(tail) if item]
     return items

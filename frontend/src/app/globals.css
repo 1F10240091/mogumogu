@@ -2,8 +2,11 @@
   --color-primary: #f59e0b;
   --color-primary-dark: #d97706;
   --color-primary-light: #fef3c7;
+  --color-primary-soft: #fff7e6;
   --color-bg: #fdfaf4;
+  --color-surface: #ffffff;
   --color-text: #1f2937;
+  --color-text-muted: #6b7280;
   --color-muted: #6b7280;
   --color-border: #e5e7eb;
   --color-white: #ffffff;
@@ -705,4 +708,88 @@ h3 {
   gap: 12px;
   flex-wrap: wrap;
   margin-top: 24px;
+}
+
+/* --- 献立内の料理名（レシピ詳細へのリンク） --- */
+.meal-dishes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 0;
+}
+
+.meal-dish {
+  margin: 0;
+}
+
+.meal-dish a {
+  text-decoration: none;
+}
+
+.meal-dish__label {
+  display: inline-block;
+  padding: 8px 16px;
+  border: 1px solid var(--color-primary-light);
+  border-radius: 999px;
+  background: var(--color-primary-light);
+  color: var(--color-primary-dark);
+  font-weight: 600;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.meal-dish a:hover .meal-dish__label,
+.meal-dish a:focus-visible .meal-dish__label {
+  background: var(--color-primary-soft);
+  border-color: var(--color-primary);
+}
+
+/* --- ダッシュボードのクイックアクション --- */
+.dashboard-quick {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.dashboard-quick__item {
+  display: block;
+  text-decoration: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.dashboard-quick__item:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.dashboard-quick__title {
+  margin: 0 0 6px;
+  color: var(--color-primary-dark);
+}
+
+.dashboard-quick__desc {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+.dashboard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* --- ページ内のセクション見出し --- */
+.section-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-bottom: 10px;
+  margin: 40px 0 16px;
+  border-bottom: 2px solid var(--color-primary-light);
+}
+
+.section-heading h2 {
+  margin: 0;
+  font-size: 20px;
 }

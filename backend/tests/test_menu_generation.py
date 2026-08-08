@@ -51,3 +51,38 @@ def test_generate_avoids_yesterday(auth_client):
     )
     monday_menu = res.json()["meals"][0]["menu_text"]
     assert "カレーライス" not in monday_menu
+
+
+def test_generate_avoids_nursery_lunch_by_date(auth_client):
+    """給食表をアップロードすると、各日の昼食と被らない夕食が生成されることを確認する。"""
+    from pathlib import Path
+
+    sample = Path(__file__).resolve().parent / "sample_menu.pdf"
+    if not sample.exists():
+        return
+
+    # 給食表をアップロード（8/1 ハンバーグ・8/4 カレーライス・8/5 焼き魚）
+    res = auth_client.post(
+        "/api/v1/menus/upload",
+        files={"file": ("menu.pdf", sample.read_bytes(), "application/pdf")},
+    )
+    assert res.status_code == 201
+
+    res = auth_client.post("/api/v1/children", json={"name": "ゆうた", "allergies": [], "preferences": []})
+    child_id = res.json()["id"]
+
+    # 8/1 開始で生成すると、その日の給食（ハンバーグ）を夕食が避ける
+    res = auth_client.post(
+        "/api/v1/recipes/generate", json={"child_id": child_id, "menu_date": "2026-08-01", "days": 1}
+    )
+    assert res.status_code == 201
+    dishes = res.json()["meals"][0]["ingredients"]["dishes"]
+    assert "ハンバーグ" not in dishes
+
+    # 8/4 開始ならその日の給食（カレーライス）を避ける
+    res = auth_client.post(
+        "/api/v1/recipes/generate", json={"child_id": child_id, "menu_date": "2026-08-04", "days": 1}
+    )
+    assert res.status_code == 201
+    dishes = res.json()["meals"][0]["ingredients"]["dishes"]
+    assert "カレーライス" not in dishes

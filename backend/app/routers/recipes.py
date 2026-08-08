@@ -1,11 +1,11 @@
 """AI 献立提案 API。
 
 保育園の昼食・冷蔵庫の在庫・アレルギー・好き嫌い・前日の夕食を考慮した
-夕食献立を生成する。AI エンジンは Xiaomi MiMo（OpenAI 互換 API）を使用し、
+夕食献立を生成する。AI エンジンは Gemini（OpenAI 互換 API）を使用し、
 API キー未設定時はルールベースにフォールバックする。
 """
 
-from datetime import timedelta
+from datetime import date, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -44,6 +44,23 @@ def generate_recipe(
     ]
     inventory = [item.name for item in db.query(InventoryItem).filter(InventoryItem.user_id == user.id).all()]
 
+    # 各日の給食と被らない献立選定用に、日付→料理名リストを構築
+    nursery_menus_by_date: dict[date, list[str]] = {}
+    for m in db.query(NurseryMenu).filter(NurseryMenu.user_id == user.id).all():
+        by_date = (m.ingredients or {}).get("dishes_by_date") or []
+        if not by_date:
+            continue
+        for entry in by_date:
+            day = entry.get("day")
+            if not day:
+                continue
+            try:
+                d = date(m.date.year, entry.get("month") or m.date.month, day)
+            except (TypeError, ValueError):
+                continue
+            dishes = entry.get("dishes") or []
+            nursery_menus_by_date.setdefault(d, []).extend(dishes)
+
     # レシピマスタを DB から取得（アレルゲン照合・選定の真実源）
     recipes = db.query(Recipe).all()
 
@@ -66,6 +83,7 @@ def generate_recipe(
         yesterday_menu=yesterday_menu,
         inventory=inventory,
         recipes=recipes,
+        nursery_menus_by_date=nursery_menus_by_date,
     )
 
     meals: list[SuggestedMeal] = []

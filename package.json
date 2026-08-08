@@ -8,12 +8,15 @@
   ],
   "scripts": {
     "setup": "npm install && npm run setup:backend",
-    "setup:backend": "cd backend && python -m venv .venv && .venv\\Scripts\\pip install -r requirements.txt",
+    "setup:backend": "cd backend && py -3.12 -m venv .venv && .venv\\Scripts\\pip install -r requirements.txt && .venv\\Scripts\\pip install -r requirements-dev.txt",
     "dev": "npm run dev:backend & npm run dev:frontend",
     "dev:frontend": "npm run dev --workspace frontend",
     "dev:backend": "cd backend && .venv\\Scripts\\uvicorn app.main:app --reload --port 8000",
+    "start:backend": "scripts\\start-backend.bat",
+    "start:frontend": "scripts\\start-frontend.bat",
     "build": "npm run build --workspace frontend",
-    "lint": "npm run lint --workspace frontend"
+    "lint": "npm run lint --workspace frontend",
+    "test": "cd backend && .venv\\Scripts\\python -X utf8 -m pytest tests/ -q"
   },
   "engines": {
     "node": ">=18.17.0"

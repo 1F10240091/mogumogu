@@ -3,7 +3,49 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import AppNav from "@/components/AppNav";
-import { api, type Child, type GenerateResponse } from "@/lib/api";
+import RequireAuth from "@/components/RequireAuth";
+import { api, type Child, type GenerateResponse, type SuggestedMeal } from "@/lib/api";
+
+function MealDishes({ meal }: { meal: SuggestedMeal }) {
+  const ingredients = (meal.ingredients ?? {}) as {
+    dishes?: string[];
+    recipe_ids?: string[];
+  };
+  const dishes = ingredients.dishes ?? [];
+  const recipeIds = ingredients.recipe_ids ?? [];
+
+  if (dishes.length === 0) {
+    return (
+      <pre
+        style={{ whiteSpace: "pre-wrap", fontFamily: "inherit", margin: 0 }}
+      >
+        {meal.menu_text}
+      </pre>
+    );
+  }
+
+  return (
+    <ul className="meal-dishes" style={{ listStyle: "none", margin: 0 }}>
+      {dishes.map((dish, i) => {
+        const recipeId = recipeIds[i];
+        const inner = (
+          <span className="meal-dish__label">{dish}</span>
+        );
+        return (
+          <li key={`${dish}-${i}`} className="meal-dish">
+            {recipeId ? (
+              <Link href={`/recipe-master/${recipeId}`}>{inner}</Link>
+            ) : (
+              <Link href={`/recipe-search?keyword=${encodeURIComponent(dish)}`}>
+                {inner}
+              </Link>
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
 
 export default function MealPlanPage() {
   const [children, setChildren] = useState<Child[]>([]);
@@ -31,7 +73,8 @@ export default function MealPlanPage() {
   };
 
   return (
-    <main className="main">
+    <RequireAuth>
+      <main className="main">
       <AppNav />
       <div className="container" style={{ paddingBottom: 80 }}>
         <div className="page-header">
@@ -90,19 +133,13 @@ export default function MealPlanPage() {
 
         {mealPlan && mealPlan.meals.length > 0 && (
           <div style={{ marginTop: 24 }}>
-            <h2>提案された献立（{mealPlan.meals.length} 日分）</h2>
+            <h2 className="page-header__title">
+              提案された献立（{mealPlan.meals.length} 日分）
+            </h2>
             {mealPlan.meals.map((meal) => (
               <div className="card" key={meal.id}>
                 <h3>{meal.date}</h3>
-                <pre
-                  style={{
-                    whiteSpace: "pre-wrap",
-                    fontFamily: "inherit",
-                    margin: 0,
-                  }}
-                >
-                  {meal.menu_text}
-                </pre>
+                <MealDishes meal={meal} />
               </div>
             ))}
             <div className="action-links">
@@ -113,6 +150,7 @@ export default function MealPlanPage() {
           </div>
         )}
       </div>
-    </main>
+      </main>
+    </RequireAuth>
   );
 }

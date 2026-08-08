@@ -1,20 +1,11 @@
 """献立表（OCR・メニュー）API のテスト。"""
 
+from io import BytesIO
 from pathlib import Path
 
+from app.services.menu_parser import parse_menu_text
+
 SAMPLE_PDF = Path(__file__).resolve().parent / "sample_menu.pdf"
-
-
-def _sample_pdf() -> bytes:
-    # 最小限の PDF（1ページ）を生成
-    from reportlab.pdfgen import canvas
-
-    buf = BytesIO()
-    c = canvas.Canvas(buf)
-    c.drawString(100, 750, "2026年8月献立表")
-    c.drawString(100, 720, "8/3 ごはん みそ汁 ハンバーグ")
-    c.save()
-    return buf.getvalue()
 
 
 def test_create_and_get_menu(auth_client):
@@ -69,3 +60,35 @@ def test_upload_valid_pdf(auth_client):
     assert res.status_code == 201
     assert res.json()["menu_text"]
     assert len(res.json()["ingredients"]["dishes"]) > 0
+
+
+def test_upload_pdf_stores_dishes_by_date(auth_client):
+    """アップロードした献立表が日付別の料理名として構造化保存されることを確認する。"""
+    if not SAMPLE_PDF.exists():
+        return
+    data = SAMPLE_PDF.read_bytes()
+    res = auth_client.post(
+        "/api/v1/menus/upload",
+        files={"file": ("menu_aug.pdf", data, "application/pdf")},
+    )
+    assert res.status_code == 201
+    by_date = res.json()["ingredients"]["dishes_by_date"]
+    assert len(by_date) >= 1
+    entry = by_date[0]
+    assert entry["month"] == 8
+    assert entry["day"] == 1
+    assert "ハンバーグ" in entry["dishes"]
+
+
+def test_parse_menu_text_multi_day():
+    """複数日の献立テキストが日付ごとに分割されることを確認する。"""
+    text = (
+        "8/3(月) 昼食: ごはん みそ汁 ハンバーグ\n"
+        "8/4(火) 昼食: ごはん みそ汁 焼き魚\n"
+    )
+    entries = parse_menu_text(text)
+    assert len(entries) == 2
+    assert (entries[0].month, entries[0].day) == (8, 3)
+    assert "ハンバーグ" in entries[0].dishes
+    assert (entries[1].month, entries[1].day) == (8, 4)
+    assert "焼き魚" in entries[1].dishes

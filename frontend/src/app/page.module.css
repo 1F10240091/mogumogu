@@ -43,7 +43,12 @@
 
 .hero {
   text-align: center;
-  padding: 80px 24px;
+  padding: 88px 24px;
+  background: linear-gradient(
+    180deg,
+    var(--color-primary-light) 0%,
+    var(--color-bg) 100%
+  );
 }
 
 .title {

@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Hoiku-Recipe | 保育園児の親向け献立自動生成",
+  title: "MoguMogu | 保育園児の親向け献立自動生成",
   description:
     "保育園の献立表を読み取り、アレルギー・好き嫌い・冷蔵庫の在庫を考慮した夕食献立を AI が自動提案します。",
 };

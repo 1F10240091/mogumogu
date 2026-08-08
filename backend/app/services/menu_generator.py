@@ -4,7 +4,7 @@
 アレルギー・好き嫌い・前日の夕食を考慮した夕食献立を選定する。
 
 選定方式:
-- Xiaomi MiMo（OpenAI 互換 API）が利用可能なら、レシピカタログと制約を
+- Gemini（OpenAI 互換 API）が利用可能なら、レシピカタログと制約を
   渡して「どのレシピを選ぶか」を決めさせる。
 - API キー未設定時はルールベースで DB から順に選定する。
 - どちらの場合も選定結果を DB の食材情報と照合し、アレルゲンが
@@ -76,6 +76,22 @@ def _shared_names(a: list[str], b: list[str]) -> bool:
     return bool(sa & sb)
 
 
+def _nursery_dishes_for_date(nursery_menus_by_date: dict[date, list[str]], d: date) -> list[str]:
+    """指定日（または前日）の給食料理名リストを返す。
+
+    日付のずれ（週末など）を考慮し、該当日が無い場合は直前の日付を探す。
+    """
+    if not nursery_menus_by_date:
+        return []
+    if d in nursery_menus_by_date:
+        return nursery_menus_by_date[d]
+    # 該当日が無い場合は直近の過去日を探索
+    past = [k for k in nursery_menus_by_date if k <= d]
+    if past:
+        return nursery_menus_by_date[max(past)]
+    return next(iter(nursery_menus_by_date.values()), [])
+
+
 def generate_menus(
     *,
     child_name: str,
@@ -87,6 +103,7 @@ def generate_menus(
     yesterday_menu: str | None = None,
     inventory: list[str] | None = None,
     recipes: list[Recipe] | None = None,
+    nursery_menus_by_date: dict[date, list[str]] | None = None,
 ) -> list[GeneratedMenu]:
     """指定日数分の夕食献立をレシピマスタから選定する。
 
@@ -101,6 +118,8 @@ def generate_menus(
             またいでも漏れなく重複を避けるため、開始日前日の夕食を渡す。
         inventory: 冷蔵庫の在庫食材リスト。
         recipes: レシピマスタ。None の場合は DB から全件取得する。
+        nursery_menus_by_date: 日付→給食料理名リストの対応（各日の給食と被らない
+            献立選定に使用）。None の場合は従来どおりテキスト全体で重複回避する。
 
     Returns:
         日付ごとの GeneratedMenu のリスト。
@@ -108,10 +127,11 @@ def generate_menus(
     settings = get_settings()
     inventory = inventory or []
     recipe_list = recipes if recipes is not None else []
+    by_date = nursery_menus_by_date or {}
 
     if settings.ai_api_key:
         try:
-            return _generate_with_mimo(
+            return _generate_with_ai(
                 child_name=child_name,
                 start_date=start_date,
                 days=days,
@@ -135,6 +155,7 @@ def generate_menus(
         nursery_menus=nursery_menus,
         yesterday_menu=yesterday_menu,
         recipes=recipe_list,
+        nursery_menus_by_date=by_date,
     )
 
 
@@ -148,6 +169,7 @@ def _generate_rule_based(
     nursery_menus: list[str],
     yesterday_menu: str | None,
     recipes: list[Recipe],
+    nursery_menus_by_date: dict[date, list[str]] | None = None,
 ) -> list[GeneratedMenu]:
     """レシピマスタからルールベースで献立を選定する。
 
@@ -157,6 +179,7 @@ def _generate_rule_based(
     allergens = [a.lower() for a in allergies + preferences]
     nursery_text = " ".join(nursery_menus)
     yesterday_dishes = _extract_dishes(yesterday_menu) if yesterday_menu else []
+    by_date = nursery_menus_by_date or {}
 
     mains = [r for r in recipes if r.meal_type == "main"]
     soup = next((r for r in recipes if r.meal_type == "soup" and not _recipe_has_allergen(r, allergens)), None)
@@ -164,10 +187,11 @@ def _generate_rule_based(
     staple = next((r for r in recipes if r.meal_type == "staple" and not _recipe_has_allergen(r, allergens)), None)
 
     selected: list[list[Recipe]] = []
+    nursery_parts = [p for p in nursery_text.split("・") if p]
     for main in mains:
         if _recipe_has_allergen(main, allergens):
             continue
-        if any(_matches_ingredient(main.name, part) for part in nursery_text.split("・")):
+        if any(_matches_ingredient(part, main.name) or _matches_ingredient(main.name, part) for part in nursery_parts):
             continue
         if _shared_names([main.name], yesterday_dishes):
             continue
@@ -192,6 +216,8 @@ def _generate_rule_based(
     for i in range(days):
         d = start_date + timedelta(days=i)
         combo = selected[i % len(selected)]
+        # 各日の給食と被らないように、その日の給食と重複する料理は差し替える
+        combo = _avoid_nursery_overlap(combo, _nursery_dishes_for_date(by_date, d), mains, allergens)
         dishes = [r.name for r in combo]
         result.append(
             GeneratedMenu(
@@ -202,6 +228,34 @@ def _generate_rule_based(
                 recipe_ids=[r.id for r in combo],
             )
         )
+    return result
+
+
+def _avoid_nursery_overlap(
+    combo: list[Recipe], nursery_dishes: list[str], mains: list[Recipe], allergens: list[str]
+) -> list[Recipe]:
+    """その日の給食と主菜が被らないよう、主菜を差し替える。
+
+    給食に含まれる料理名と一致する主菜は、別の主菜（既に組み合わせで使われて
+    いないもの）へ差し替える。被っていなければそのまま返す。
+    """
+    if not nursery_dishes:
+        return combo
+    result = list(combo)
+    for idx, recipe in enumerate(result):
+        if recipe.meal_type != "main":
+            continue
+        if any(
+            _matches_ingredient(part, recipe.name) or _matches_ingredient(recipe.name, part)
+            for part in nursery_dishes
+        ):
+            used_names = {r.name for r in result}
+            replacement = next(
+                (m for m in mains if m.name not in used_names and not _recipe_has_allergen(m, allergens)),
+                None,
+            )
+            if replacement:
+                result[idx] = replacement
     return result
 
 
@@ -219,7 +273,7 @@ def _extract_dishes(menu_text: str) -> list[str]:
     return dishes
 
 
-def _generate_with_mimo(
+def _generate_with_ai(
     *,
     child_name: str,
     start_date: date,
@@ -231,7 +285,7 @@ def _generate_with_mimo(
     inventory: list[str],
     recipes: list[Recipe],
 ) -> list[GeneratedMenu]:
-    """Xiaomi MiMo（OpenAI 互換 API）にレシピカタログから選定させる。"""
+    """Gemini（OpenAI 互換 API）にレシピカタログから選定させる。"""
     settings = get_settings()
 
     catalog = "\n".join(
@@ -283,7 +337,7 @@ def _generate_with_mimo(
         resp.raise_for_status()
         content = resp.json()["choices"][0]["message"]["content"]
 
-    entries = _parse_mimo_response(content)
+    entries = _parse_ai_response(content)
     menus: list[GeneratedMenu] = []
     for i, entry in enumerate(entries[:days]):
         d = start_date + timedelta(days=i)
@@ -301,7 +355,7 @@ def _generate_with_mimo(
                 date=d,
                 menu_text=f"{child_name} さんの夕食（{d}）\n{'・'.join(r.name for r in safe_combo)}",
                 dishes=[r.name for r in safe_combo],
-                engine="mimo",
+                engine="gemini",
                 recipe_ids=[r.id for r in safe_combo],
             )
         )
@@ -310,7 +364,7 @@ def _generate_with_mimo(
     return menus
 
 
-def _parse_mimo_response(content: str) -> list[dict]:
+def _parse_ai_response(content: str) -> list[dict]:
     """AI の出力から JSON 配列を抽出する。"""
     match = re.search(r"\[.*\]", content, re.DOTALL)
     if not match:

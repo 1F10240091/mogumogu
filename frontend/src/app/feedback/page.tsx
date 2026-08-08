@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import AppNav from "@/components/AppNav";
+import RequireAuth from "@/components/RequireAuth";
 import { api } from "@/lib/api";
 
 const RATINGS = [1, 2, 3, 4, 5];
@@ -28,7 +29,8 @@ export default function FeedbackPage() {
   };
 
   return (
-    <main className="main">
+    <RequireAuth>
+      <main className="main">
       <AppNav />
       <div className="container" style={{ paddingBottom: 80 }}>
         <div className="page-header">
@@ -77,6 +79,7 @@ export default function FeedbackPage() {
           </div>
         )}
       </div>
-    </main>
+      </main>
+    </RequireAuth>
   );
 }

@@ -1,6 +1,4 @@
-# 画像 OCR（easyocr）用の追加依存。
-# スキャン画像・スキャン PDF の献立表を読み取る場合のみ必要。
+# スキャン PDF（画像化して AI OCR に渡す）用の軽量依存。
+# 画像 OCR 本体は Gemini（OpenAI 互換 API）を利用するため、easyocr / PyTorch は不要。
 # インストール: pip install -r requirements-ocr.txt
-easyocr>=1.7.0
-numpy>=1.26.0
-pdf2image>=1.17.0
+pypdfium2>=4.30.0

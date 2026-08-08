@@ -100,6 +100,9 @@ def _extract_from_scan_pdf(data: bytes, page_count: int) -> OCRResult:
             pil_image = bitmap.to_pil()
             result = _extract_from_image(pil_image)
             results.append(result.text)
+    except OCRProcessingError:
+        # _extract_from_image 由来のエラー（APIキー未設定等）はそのまま伝える
+        raise
     except Exception as exc:  # noqa: BLE001
         raise OCRProcessingError(f"PDF の画像変換に失敗しました: {exc}") from exc
 

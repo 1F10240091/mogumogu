@@ -48,12 +48,6 @@ _SYNONYMS: dict[str, list[str]] = {
     "ごま": ["ごま", "ゴマ", "胡麻"],
 }
 
-# 献立を構成する際の標準的な組み合わせ（主菜・汁物・副菜・主食）
-_DEFAULT_SOUP = "みそ汁"
-_DEFAULT_SIDE = "おひたし"
-_DEFAULT_STAPLE = "ごはん"
-
-
 def _matches_ingredient(ingredient: str, target: str) -> bool:
     """食材名（表記ゆれ対応）が対象文字列に含まれるか判定する。"""
     aliases = _SYNONYMS.get(ingredient.lower(), [ingredient])

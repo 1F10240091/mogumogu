@@ -7,7 +7,7 @@
 | 高橋櫂 | フロント UI（Figma / Next.js） |
 | 田中琴乃 | フロント機能（Next.js と Supabase/FastAPI の連携） |
 | 大橋弘太郎 | インフラ・環境管理（Supabase 初期設定・チェック設定） |
-| 経塚成夢 | バックエンド / AI（FastAPI / Xiaomi MiMo） |
+| 経塚成夢 | バックエンド / AI（FastAPI / Gemini） |
 
 ## 役割分担
 
@@ -16,7 +16,7 @@
 | **フロント UI** | Figma で画面の見た目を設計し、Next.js で Web 画面の見た目（コンポーネント）を作成 |
 | **フロント機能** | 画面（Next.js）と裏側のデータ（Supabase/FastAPI）を繋ぎ、ボタンを押したときの動きを作成 |
 | **インフラ・環境管理** | Supabase の初期設定（ログイン機能等）と、エラーが出ないよう全員のコードのチェック設定を作成 |
-| **バックエンド / AI** | FastAPI（Python）を使って、AI（Xiaomi MiMo）を動かすシステムとデータ処理を作成 |
+| **バックエンド / AI** | FastAPI（Python）を使って、AI（Gemini）を動かすシステムとデータ処理を作成 |
 
 ## 開発スケジュール
 
@@ -50,7 +50,7 @@
 - **開発環境**: Node.js / Python
 - **デザイン・管理**: GitHub / Figma / ESLint / Prettier
 - **インフラ**: Supabase / Vercel
-- **AI**: Xiaomi MiMo（のみ有料プラン利用）
+- **AI**: Gemini（無料枠を利用）
 
 ## その他
 

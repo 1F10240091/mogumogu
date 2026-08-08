@@ -16,7 +16,7 @@ _DEV_JWT_SECRET = "dev-only-change-me-0123456789abcdef0123456789abcdef"
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    model_config = SettingsConfigDict(env_file=str(BACKEND_DIR / ".env"), env_file_encoding="utf-8")
 
     app_name: str = "MoguMogu API"
     version: str = "0.1.0"

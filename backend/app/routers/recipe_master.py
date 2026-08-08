@@ -103,6 +103,10 @@ def update_recipe(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="レシピが見つかりません")
 
     if payload.name is not None:
+        if payload.name != recipe.name:
+            existing = db.query(Recipe).filter(Recipe.name == payload.name).first()
+            if existing is not None:
+                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="同じ名前のレシピが既に存在します")
         recipe.name = payload.name
     if payload.meal_type is not None:
         recipe.meal_type = payload.meal_type

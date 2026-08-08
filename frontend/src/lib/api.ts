@@ -2,8 +2,11 @@
 const API_BASE = "/api/v1";
 
 // FastAPI のエラーレスポンスを日本語のわかりやすいメッセージに変換する
-function friendlyError(body: string, status: number): string {
-  if (status === 401) return "メールアドレスまたはパスワードが正しくありません";
+function friendlyError(body: string, status: number, path: string): string {
+  if (status === 401 && path.endsWith("/auth/login")) {
+    return "メールアドレスまたはパスワードが正しくありません";
+  }
+  if (status === 401) return "ログインの有効期限が切れました。もう一度ログインしてください";
   if (status === 403) return "この操作を行う権限がありません";
   if (status === 404) return "対象が見つかりませんでした";
   if (status === 409) return "既に登録されています";
@@ -46,7 +49,10 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(friendlyError(body, res.status));
+    throw new Error(friendlyError(body, res.status, path));
+  }
+  if (res.status === 204) {
+    return undefined as T;
   }
   return res.json() as Promise<T>;
 }

@@ -51,11 +51,15 @@ function MealDishes({ meal }: { meal: SuggestedMeal }) {
 export default function RecipesPage() {
   const [recipes, setRecipes] = useState<SuggestedMeal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     api
       .listMealRecipes()
       .then(setRecipes)
+      .catch((err) =>
+        setError(err instanceof Error ? err.message : "読み込みに失敗しました"),
+      )
       .finally(() => setLoading(false));
   }, []);
 
@@ -71,6 +75,7 @@ export default function RecipesPage() {
             レシピの作り方が見られます。
           </p>
         </div>
+        {error && <div className="alert alert--error">{error}</div>}
         {loading ? (
           <div className="loading">読み込み中...</div>
         ) : recipes.length === 0 ? (

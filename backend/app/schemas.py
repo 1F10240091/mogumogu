@@ -1,7 +1,7 @@
 """Pydantic スキーマ定義。"""
 
 import re
-from datetime import date, datetime
+from datetime import date
 from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
@@ -168,20 +168,3 @@ class RecipeSearchResponse(BaseModel):
     page: int
     per_page: int
     total_pages: int
-
-
-# --- 買い物リスト ---
-class ShoppingGenerateRequest(BaseModel):
-    child_id: str
-    meal_id: str
-
-
-class ShoppingItemResponse(ORMModel):
-    id: str
-    name: str
-    quantity: Optional[str] = None
-
-
-class ShoppingListResponse(BaseModel):
-    items: list[ShoppingItemResponse]
-    generated_at: datetime

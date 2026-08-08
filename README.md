@@ -126,7 +126,7 @@ npm run dev
 | `npm run dev` | フロント・バック同時起動（開発） |
 | `npm run dev:frontend` | フロントエンドのみ起動 |
 | `npm run dev:backend` | バックエンドのみ起動 |
-| `npm run start:backend` / `start:frontend` | バックグラウンド起動（bat） |
+| `npm run start:backend` / `npm run start:frontend` | バックグラウンド起動（bat） |
 | `npm run build` | フロントエンドのプロダクションビルド |
 | `npm run lint` | ESLint 実行 |
 | `npm run test` | バックエンドの pytest 実行 |
@@ -146,8 +146,10 @@ npm run test
 | 項目 | 要件 |
 |------|------|
 | `JWT_SECRET_KEY` | 32 文字以上のランダム値（`.env` で設定。デフォルト値はエラー） |
-| `CORS_ORIGINS` | localhost を含めない（本番オリジンを指定） |
+| `CORS_ORIGINS_RAW` | localhost を含めない（本番オリジンを指定） |
 | `DATABASE_URL` | SQLite 禁止（PostgreSQL などの本番 DB を指定） |
+
+`DATABASE_URL` に PostgreSQL を使う場合は `psycopg2-binary` が `backend/requirements.txt` に含まれています（SQLite 開発では未使用）。
 
 設定例は `backend/.env.example` を参照してください。`.env` は git 管理外です。
 
@@ -195,6 +197,8 @@ MoguMogu/
 │   │       ├── menu_generator.py # AI 献立生成
 │   │       ├── shopping_list.py # 買い物リスト集計
 │   │       └── seed_data.py  # レシピシード 29 件
+│   ├── app/main.py           # FastAPI エントリ（起動時に seed 実行）
+│   ├── app/seed.py           # レシピシード投入
 │   ├── tests/                # pytest テスト
 │   ├── requirements.txt
 │   ├── requirements-ocr.txt  # pypdfium2（スキャン PDF の画像化のみ）

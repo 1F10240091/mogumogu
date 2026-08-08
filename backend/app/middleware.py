@@ -23,10 +23,16 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self._hits: dict[str, deque] = defaultdict(deque)
 
     def _client_key(self, request: Request) -> str:
+        # uvicorn を直接公開する設定（--proxy-headers なし）では
+        # x-forwarded-for をクライアントが偽装できるため、優先せず接続元IPを使う。
+        # リバースプロキシ（nginx 等）を使用し、--proxy-headers を有効化している場合は
+        # uvicorn 側で信頼したヘッダに置換されるため request.client.host が正しい IP になる。
+        if request.client is not None and request.client.host:
+            return request.client.host
         forwarded = request.headers.get("x-forwarded-for")
         if forwarded:
             return forwarded.split(",")[0].strip()
-        return request.client.host if request.client else "unknown"
+        return "unknown"
 
     async def dispatch(self, request: Request, call_next: Callable[[Request], Response]) -> Response:
         path = request.url.path

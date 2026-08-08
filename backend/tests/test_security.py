@@ -50,10 +50,12 @@ def test_rate_limit_blocks_excess_requests():
 def test_rate_limit_per_ip_is_independent():
     tc = _limited_app(max_requests=2)
     for _ in range(2):
-        assert tc.post("/api/v1/auth/login", headers={"x-forwarded-for": "1.1.1.1"}).status_code == 200
-    assert tc.post("/api/v1/auth/login", headers={"x-forwarded-for": "1.1.1.1"}).status_code == 429
-    # 別 IP からは制限されない
-    assert tc.post("/api/v1/auth/login", headers={"x-forwarded-for": "2.2.2.2"}).status_code == 200
+        assert tc.post("/api/v1/auth/login").status_code == 200
+    # 上限超過後は制限される
+    assert tc.post("/api/v1/auth/login").status_code == 429
+    # x-forwarded-for を偽装しても制限は解除されない（接続元 IP で判定）
+    for _ in range(3):
+        assert tc.post("/api/v1/auth/login", headers={"x-forwarded-for": "9.9.9.9"}).status_code == 429
 
 
 def test_default_app_has_rate_limit_disabled_in_tests(client):

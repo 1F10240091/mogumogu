@@ -11,3 +11,5 @@ email-validator>=2.2.0
 pypdf>=5.0.0
 Pillow>=10.4.0
 httpx>=0.27.0
+# 本番（PostgreSQL）用ドライバ。開発（SQLite）では未使用
+psycopg2-binary>=2.9.0

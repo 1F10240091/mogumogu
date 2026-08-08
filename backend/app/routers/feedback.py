@@ -1,7 +1,7 @@
 """フィードバック API（ユーザーテスト・学祭アンケート収集）。"""
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -16,12 +16,11 @@ class FeedbackCreate(BaseModel):
 
 
 class FeedbackResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     rating: int | None
     comment: str
-
-    class Config:
-        from_attributes = True
 
 
 @router.post("", response_model=FeedbackResponse, status_code=status.HTTP_201_CREATED)

@@ -4,6 +4,7 @@ from datetime import date
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
+from starlette.concurrency import run_in_threadpool
 
 from app.database import get_db
 from app.models import NurseryMenu, User
@@ -28,9 +29,17 @@ async def upload_menu(
 
     抽出したテキストを日付・献立項目に構造化し、食材リストとして保存する。
     """
+    MAX_UPLOAD_SIZE = 20 * 1024 * 1024  # 20 MB
     data = await file.read()
+    if len(data) > MAX_UPLOAD_SIZE:
+        raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="ファイルサイズが大きすぎます（20MBまで）")
     try:
-        result = extract_text(filename=file.filename or "", content_type=file.content_type or "", data=data)
+        result = await run_in_threadpool(
+            extract_text,
+            filename=file.filename or "",
+            content_type=file.content_type or "",
+            data=data,
+        )
     except OCRUnsupportedError as exc:
         raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail=str(exc)) from exc
     except OCRProcessingError as exc:

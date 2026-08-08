@@ -50,7 +50,11 @@ function MealDishes({ meal }: { meal: SuggestedMeal }) {
 export default function MealPlanPage() {
   const [children, setChildren] = useState<Child[]>([]);
   const [selectedChild, setSelectedChild] = useState("");
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(() => {
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  });
   const [days, setDays] = useState(7);
   const [mealPlan, setMealPlan] = useState<GenerateResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -59,7 +63,9 @@ export default function MealPlanPage() {
     api.listChildren().then((list) => {
       setChildren(list);
       if (list.length > 0) setSelectedChild(list[0].id);
-    });
+    }).catch((err) =>
+      setError(err instanceof Error ? err.message : "子どもの読み込みに失敗しました"),
+    );
   }, []);
 
   const handleGenerate = async () => {

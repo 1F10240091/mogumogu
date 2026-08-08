@@ -1,6 +1,6 @@
 """冷蔵庫の在庫・買い物リスト API。"""
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
@@ -54,7 +54,7 @@ def get_shopping_list(user: User = Depends(get_current_user), db: Session = Depe
         recipe_ids.extend(ids)
 
     if not recipe_ids:
-        return ShoppingListResponse(items=[], generated_at=datetime.utcnow())
+        return ShoppingListResponse(items=[], generated_at=datetime.now(UTC))
 
     recipes_by_id = {r.id: r for r in db.query(Recipe).all()}
     inventory = [item.name for item in db.query(InventoryItem).filter(InventoryItem.user_id == user.id).all()]
@@ -62,7 +62,7 @@ def get_shopping_list(user: User = Depends(get_current_user), db: Session = Depe
     items = build_shopping_list(recipe_ids=recipe_ids, recipes_by_id=recipes_by_id, inventory=inventory)
     return ShoppingListResponse(
         items=[ShoppingItemOut(name=i.name, quantity=i.quantity, unit=i.unit, needed=i.needed, source_recipes=i.source_recipes) for i in items],
-        generated_at=datetime.utcnow(),
+        generated_at=datetime.now(UTC),
     )
 
 

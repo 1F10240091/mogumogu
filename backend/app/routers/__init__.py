@@ -1,3 +1,1 @@
-from . import recipes
-
-__all__ = ["recipes"]
+"""API ルーター集。"""

@@ -1,148 +1,165 @@
-from datetime import date, datetime
-from enum import Enum
-from uuid import UUID
+"""Pydantic スキーマ定義。"""
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+import re
+from datetime import date
+from typing import Optional
 
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
-class RecipeCategory(str, Enum):
-    MAIN_DISH = "main_dish"
-    SIDE_DISH = "side_dish"
-    SOUP = "soup"
-    RICE = "rice"
-    NOODLE = "noodle"
-    DESSERT = "dessert"
-    OTHER = "other"
+# パスワード強度チェック: 8文字以上・英字・数字を含む
+_PASSWORD_RE = re.compile(r"^(?=.*[A-Za-z])(?=.*\d).{8,}$")
 
 
-class UserBase(BaseModel):
+def validate_password_strength(value: str) -> str:
+    if not _PASSWORD_RE.match(value):
+        raise ValueError("パスワードは8文字以上で、英字と数字をそれぞれ1文字以上含めてください")
+    return value
+
+
+class ORMModel(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+
+# --- 認証 ---
+class RegisterRequest(BaseModel):
     email: EmailStr
-    display_name: str
+    password: str = Field(min_length=8)
+    display_name: Optional[str] = None
+
+    @field_validator("password")
+    @classmethod
+    def check_password(cls, v: str) -> str:
+        return validate_password_strength(v)
 
 
-class UserCreate(UserBase):
+class LoginRequest(BaseModel):
+    email: EmailStr
     password: str
 
 
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+
+class UserResponse(ORMModel):
+    id: str
+    email: EmailStr
+    display_name: Optional[str] = None
+
+
 class UserUpdate(BaseModel):
-    email: EmailStr | None = None
-    display_name: str | None = None
+    display_name: Optional[str] = None
+    password: Optional[str] = Field(default=None, min_length=8)
+
+    @field_validator("password")
+    @classmethod
+    def check_password(cls, v: str) -> str:
+        return validate_password_strength(v)
 
 
-class UserResponse(UserBase):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: UUID
-    created_at: datetime
+# --- お子様 ---
+class AllergyCreate(BaseModel):
+    ingredient: str
 
 
-class ChildBase(BaseModel):
+class AllergyResponse(ORMModel):
+    id: str
+    ingredient: str
+
+
+class PreferenceCreate(BaseModel):
+    ingredient: str
+    mode: str = "exclude"
+
+
+class PreferenceResponse(ORMModel):
+    id: str
+    ingredient: str
+    mode: str
+
+
+class ChildCreate(BaseModel):
     name: str
-    birth_date: date | None = None
-    gender: str | None = None
-
-
-class ChildCreate(ChildBase):
-    pass
+    birth_date: Optional[date] = None
+    allergies: list[AllergyCreate] = []
+    preferences: list[PreferenceCreate] = []
 
 
 class ChildUpdate(BaseModel):
-    name: str | None = None
-    birth_date: date | None = None
-    gender: str | None = None
+    name: Optional[str] = None
+    birth_date: Optional[date] = None
 
 
-class ChildResponse(ChildBase):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: UUID
-    user_id: UUID
-    created_at: datetime
-
-
-class AllergyBase(BaseModel):
-    ingredient: str
-
-
-class AllergyCreate(AllergyBase):
-    pass
-
-
-class AllergyResponse(AllergyBase):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: UUID
-    child_id: UUID
-
-
-class PreferenceBase(BaseModel):
-    ingredient: str
-    mode: str  # exclude / improve
-
-
-class PreferenceCreate(PreferenceBase):
-    pass
-
-
-class PreferenceResponse(PreferenceBase):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: UUID
-    child_id: UUID
-
-
-class ChildWithDetails(ChildResponse):
+class ChildResponse(ORMModel):
+    id: str
+    name: str
+    birth_date: Optional[date] = None
     allergies: list[AllergyResponse] = []
     preferences: list[PreferenceResponse] = []
 
 
-class RecipeBase(BaseModel):
-    title: str = Field(..., min_length=1, max_length=200)
-    description: str | None = None
-    category: RecipeCategory
-    ingredients: list[str] = Field(..., min_length=1)
-    instructions: list[str] = Field(..., min_length=1)
-    cooking_time_minutes: int | None = Field(None, gt=0, le=10080)
-    servings: int | None = Field(None, ge=1, le=100)
-    image_url: str | None = None
-    source_url: str | None = None
-    tags: list[str] = []
+# --- 献立表（OCR） ---
+class NurseryMenuCreate(BaseModel):
+    date: date
+    menu_text: str
 
 
-class RecipeCreate(RecipeBase):
-    pass
+class NurseryMenuResponse(ORMModel):
+    id: str
+    date: date
+    menu_text: str
+    ingredients: dict
+
+
+# --- AI 献立提案 ---
+class GenerateRequest(BaseModel):
+    child_id: str
+    menu_date: date
+    days: int = Field(default=1, ge=1, le=7)
+
+
+class MealResponse(ORMModel):
+    id: str
+    date: date
+    menu_text: str
+    ingredients: dict
+
+
+class GenerateResponse(BaseModel):
+    meals: list[MealResponse]
+
+
+# --- レシピマスタ ---
+class Ingredient(BaseModel):
+    name: str
+    quantity: str = ""
+    unit: str = ""
+
+
+class RecipeCreate(BaseModel):
+    name: str
+    meal_type: str = "main"
+    ingredients: list[Ingredient] = []
+    instructions: str = ""
+    cook_time_minutes: int | None = Field(default=None, ge=1)
 
 
 class RecipeUpdate(BaseModel):
-    title: str | None = None
-    description: str | None = None
-    category: RecipeCategory | None = None
-    ingredients: list[str] | None = None
-    instructions: list[str] | None = None
-    cooking_time_minutes: int | None = None
-    servings: int | None = None
-    image_url: str | None = None
-    source_url: str | None = None
-    tags: list[str] | None = None
-    is_public: bool | None = None
+    name: str | None = None
+    meal_type: str | None = None
+    ingredients: list[Ingredient] | None = None
+    instructions: str | None = None
+    cook_time_minutes: int | None = Field(default=None, ge=1)
 
 
-class RecipeResponse(RecipeBase):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: UUID
-    created_at: datetime
-    is_public: bool
-
-
-class RecipeSearchParams(BaseModel):
-    keyword: str | None = None
-    category: RecipeCategory | None = None
-    ingredients: list[str] | None = None
-    tags: list[str] | None = None
-    max_cooking_time: int | None = None
-    page: int = Field(default=1, ge=1)
-    per_page: int = Field(default=20, ge=1, le=100)
+class RecipeResponse(ORMModel):
+    id: str
+    name: str
+    meal_type: str
+    ingredients: list[Ingredient]
+    instructions: str
+    cook_time_minutes: int | None
 
 
 class RecipeSearchResponse(BaseModel):

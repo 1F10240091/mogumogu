@@ -1,195 +1,126 @@
-def _recipe_payload(**overrides):
-    payload = {
-        "title": "にんじんのやわらか煮",
-        "description": "離乳食後期から食べられる、やわらかく煮たにんじん。",
-        "category": "side_dish",
-        "ingredients": ["にんじん 1本", "だし汁 適量"],
-        "instructions": ["にんじんをやわらかくゆでる", "細かく刻んでだし汁で煮る"],
-        "cooking_time_minutes": 15,
-        "servings": 2,
-        "tags": ["離乳食", "後期"],
-    }
-    payload.update(overrides)
-    return payload
+"""レシピマスタ API のテスト。"""
 
 
-class TestRecipeCreate:
-    def test_create_recipe(self, client):
-        response = client.post("/recipes", json=_recipe_payload())
-        assert response.status_code == 201
-        data = response.json()
-        assert data["title"] == "にんじんのやわらか煮"
-        assert data["category"] == "side_dish"
-        assert data["ingredients"] == ["にんじん 1本", "だし汁 適量"]
-        assert data["tags"] == ["離乳食", "後期"]
-        assert data["is_public"] is True
-
-    def test_create_recipe_requires_title(self, client):
-        response = client.post("/recipes", json=_recipe_payload(title=""))
-        assert response.status_code == 422
-
-    def test_create_recipe_requires_category(self, client):
-        response = client.post("/recipes", json=_recipe_payload(category=""))
-        assert response.status_code == 422
+def test_seed_recipes_loaded(auth_client):
+    res = auth_client.get("/api/v1/recipe-master")
+    assert res.status_code == 200
+    assert len(res.json()) > 0
+    names = {r["name"] for r in res.json()}
+    assert "ごはん" in names
+    assert "みそ汁" in names
 
 
-class TestRecipeGet:
-    def test_get_recipe(self, client):
-        created = client.post("/recipes", json=_recipe_payload()).json()
-        response = client.get(f"/recipes/{created['id']}")
-        assert response.status_code == 200
-        assert response.json()["id"] == created["id"]
+def test_create_and_get_recipe(auth_client):
+    res = auth_client.post(
+        "/api/v1/recipe-master",
+        json={
+            "name": "テストカレー",
+            "meal_type": "main",
+            "ingredients": [{"name": "豚肉", "quantity": "150", "unit": "g"}],
+            "instructions": "煮る。",
+            "cook_time_minutes": 30,
+        },
+    )
+    assert res.status_code == 201
+    recipe_id = res.json()["id"]
 
-    def test_get_nonexistent_recipe_returns_404(self, client):
-        response = client.get("/recipes/00000000-0000-0000-0000-000000000000")
-        assert response.status_code == 404
-
-
-class TestRecipeSearch:
-    def setup_method(self):
-        self.recipes = [
-            _recipe_payload(
-                title="にんじんのやわらか煮",
-                description="離乳食後期から食べられる、やわらかく煮たにんじん。",
-                category="side_dish",
-                ingredients=["にんじん", "だし汁"],
-                tags=["離乳食", "後期"],
-                cooking_time_minutes=15,
-            ),
-            _recipe_payload(
-                title="鮭のムニエル",
-                description="バターで香ばしく焼いた鮭のメイン料理。",
-                category="main_dish",
-                ingredients=["鮭", "バター", "小麦粉"],
-                tags=["幼児食", "魚"],
-                cooking_time_minutes=25,
-            ),
-            _recipe_payload(
-                title="かぼちゃのポタージュ",
-                description="かぼちゃの甘みがおいしいスープ。",
-                category="soup",
-                ingredients=["かぼちゃ", "牛乳", "玉ねぎ"],
-                tags=["離乳食", "スープ"],
-                cooking_time_minutes=30,
-            ),
-        ]
-
-    def test_search_all(self, client):
-        for recipe in self.recipes:
-            client.post("/recipes", json=recipe)
-        response = client.get("/recipes")
-        assert response.status_code == 200
-        assert response.json()["total"] == 3
-
-    def test_search_by_keyword(self, client):
-        for recipe in self.recipes:
-            client.post("/recipes", json=recipe)
-        response = client.get("/recipes", params={"keyword": "にんじん"})
-        data = response.json()
-        assert data["total"] == 1
-        assert data["recipes"][0]["title"] == "にんじんのやわらか煮"
-
-    def test_search_by_category(self, client):
-        for recipe in self.recipes:
-            client.post("/recipes", json=recipe)
-        response = client.get("/recipes", params={"category": "main_dish"})
-        data = response.json()
-        assert data["total"] == 1
-        assert data["recipes"][0]["title"] == "鮭のムニエル"
-
-    def test_search_by_ingredients(self, client):
-        for recipe in self.recipes:
-            client.post("/recipes", json=recipe)
-        response = client.get("/recipes", params={"ingredients": "かぼちゃ"})
-        data = response.json()
-        assert data["total"] == 1
-        assert data["recipes"][0]["title"] == "かぼちゃのポタージュ"
-
-    def test_search_by_tags(self, client):
-        for recipe in self.recipes:
-            client.post("/recipes", json=recipe)
-        response = client.get("/recipes", params={"tags": "離乳食"})
-        data = response.json()
-        assert data["total"] == 2
-
-    def test_search_by_max_cooking_time(self, client):
-        for recipe in self.recipes:
-            client.post("/recipes", json=recipe)
-        response = client.get("/recipes", params={"max_cooking_time": 20})
-        data = response.json()
-        assert data["total"] == 1
-        assert data["recipes"][0]["title"] == "にんじんのやわらか煮"
-
-    def test_search_combined_filters(self, client):
-        for recipe in self.recipes:
-            client.post("/recipes", json=recipe)
-        response = client.get(
-            "/recipes",
-            params={"tags": "離乳食", "max_cooking_time": 20},
-        )
-        data = response.json()
-        assert data["total"] == 1
-        assert data["recipes"][0]["title"] == "にんじんのやわらか煮"
-
-    def test_search_pagination(self, client):
-        for recipe in self.recipes:
-            client.post("/recipes", json=recipe)
-        response = client.get("/recipes", params={"per_page": 2})
-        data = response.json()
-        assert data["total"] == 3
-        assert data["total_pages"] == 2
-        assert len(data["recipes"]) == 2
-
-        response = client.get("/recipes", params={"per_page": 2, "page": 2})
-        data = response.json()
-        assert len(data["recipes"]) == 1
-
-    def test_search_no_results(self, client):
-        for recipe in self.recipes:
-            client.post("/recipes", json=recipe)
-        response = client.get("/recipes", params={"keyword": "存在しないレシピ"})
-        data = response.json()
-        assert data["total"] == 0
-        assert data["recipes"] == []
-
-    def test_search_returns_public_recipes_only(self, client):
-        for recipe in self.recipes:
-            client.post("/recipes", json=recipe)
-        draft = client.post("/recipes", json=_recipe_payload(title="下書き")).json()
-        client.patch(f"/recipes/{draft['id']}", json={"is_public": False})
-        response = client.get("/recipes")
-        assert response.json()["total"] == 3
+    res = auth_client.get(f"/api/v1/recipe-master/{recipe_id}")
+    assert res.status_code == 200
+    assert res.json()["name"] == "テストカレー"
 
 
-class TestRecipeUpdate:
-    def test_update_recipe(self, client):
-        created = client.post("/recipes", json=_recipe_payload()).json()
-        response = client.patch(
-            f"/recipes/{created['id']}",
-            json={"title": "更新後のタイトル", "category": "main_dish"},
-        )
-        assert response.status_code == 200
-        data = response.json()
-        assert data["title"] == "更新後のタイトル"
-        assert data["category"] == "main_dish"
-
-    def test_update_nonexistent_recipe_returns_404(self, client):
-        response = client.patch(
-            "/recipes/00000000-0000-0000-0000-000000000000",
-            json={"title": "タイトル"},
-        )
-        assert response.status_code == 404
+def test_duplicate_recipe_rejected(auth_client):
+    auth_client.post("/api/v1/recipe-master", json={"name": "重複レシピ", "meal_type": "main"})
+    res = auth_client.post("/api/v1/recipe-master", json={"name": "重複レシピ", "meal_type": "main"})
+    assert res.status_code == 409
 
 
-class TestRecipeDelete:
-    def test_delete_recipe(self, client):
-        created = client.post("/recipes", json=_recipe_payload()).json()
-        response = client.delete(f"/recipes/{created['id']}")
-        assert response.status_code == 204
+def test_update_recipe(auth_client):
+    res = auth_client.post("/api/v1/recipe-master", json={"name": "更新テスト", "meal_type": "main"})
+    recipe_id = res.json()["id"]
 
-        response = client.get(f"/recipes/{created['id']}")
-        assert response.status_code == 404
+    res = auth_client.put(
+        f"/api/v1/recipe-master/{recipe_id}",
+        json={"name": "更新テスト改", "instructions": "炒める。", "cook_time_minutes": 15},
+    )
+    assert res.status_code == 200
+    assert res.json()["name"] == "更新テスト改"
+    assert res.json()["instructions"] == "炒める。"
 
-    def test_delete_nonexistent_recipe_returns_404(self, client):
-        response = client.delete("/recipes/00000000-0000-0000-0000-000000000000")
-        assert response.status_code == 404
+
+def test_delete_recipe(auth_client):
+    res = auth_client.post("/api/v1/recipe-master", json={"name": "削除テスト", "meal_type": "side"})
+    recipe_id = res.json()["id"]
+
+    res = auth_client.delete(f"/api/v1/recipe-master/{recipe_id}")
+    assert res.status_code == 204
+
+    res = auth_client.get(f"/api/v1/recipe-master/{recipe_id}")
+    assert res.status_code == 404
+
+
+def test_filter_by_meal_type(auth_client):
+    res = auth_client.get("/api/v1/recipe-master?meal_type=main")
+    assert res.status_code == 200
+    assert len(res.json()) > 0
+    assert all(r["meal_type"] == "main" for r in res.json())
+
+
+# --- レシピ検索 ---
+
+
+def test_search_recipes_by_keyword(auth_client):
+    res = auth_client.get("/api/v1/recipe-master/search", params={"keyword": "ごはん"})
+    assert res.status_code == 200
+    body = res.json()
+    assert body["total"] > 0
+    assert any("ごはん" in r["name"] for r in body["recipes"])
+
+
+def test_search_recipes_by_ingredient(auth_client):
+    res = auth_client.get("/api/v1/recipe-master/search", params={"ingredient": "にんじん"})
+    assert res.status_code == 200
+    body = res.json()
+    assert body["total"] > 0
+    assert any(
+        "にんじん" in (ing["name"] for ing in r["ingredients"]) or "にんじん" in str(r["ingredients"])
+        for r in body["recipes"]
+    )
+
+
+def test_search_recipes_by_max_cook_time(auth_client):
+    res = auth_client.get("/api/v1/recipe-master/search", params={"max_cook_time": 10})
+    assert res.status_code == 200
+    body = res.json()
+    for r in body["recipes"]:
+        if r["cook_time_minutes"] is not None:
+            assert r["cook_time_minutes"] <= 10
+
+
+def test_search_recipes_pagination(auth_client):
+    res = auth_client.get("/api/v1/recipe-master/search", params={"per_page": 5, "page": 1})
+    assert res.status_code == 200
+    body = res.json()
+    assert len(body["recipes"]) <= 5
+    assert body["total"] >= 1
+    assert body["total_pages"] >= 1
+
+
+def test_search_recipes_combined_filters(auth_client):
+    res = auth_client.get(
+        "/api/v1/recipe-master/search",
+        params={"meal_type": "main", "keyword": "カレー"},
+    )
+    assert res.status_code == 200
+    body = res.json()
+    assert all(r["meal_type"] == "main" for r in body["recipes"])
+
+
+def test_search_recipes_no_match(auth_client):
+    res = auth_client.get(
+        "/api/v1/recipe-master/search", params={"keyword": "存在しないレシピXYZ123"}
+    )
+    assert res.status_code == 200
+    body = res.json()
+    assert body["total"] == 0
+    assert body["recipes"] == []

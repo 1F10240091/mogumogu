@@ -1,32 +1,130 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+// バックエンド API クライアント
+const API_BASE = "/api/v1";
+
+// FastAPI のエラーレスポンスを日本語のわかりやすいメッセージに変換する
+function friendlyError(body: string, status: number, path: string): string {
+  if (status === 401 && path.endsWith("/auth/login")) {
+    return "メールアドレスまたはパスワードが正しくありません";
+  }
+  if (status === 401) return "ログインの有効期限が切れました。もう一度ログインしてください";
+  if (status === 403) return "この操作を行う権限がありません";
+  if (status === 404) return "対象が見つかりませんでした";
+  if (status === 409) return "既に登録されています";
+  if (status === 500) return "サーバーでエラーが発生しました。時間をおいて再度お試しください";
+
+  try {
+    const parsed = JSON.parse(body);
+    const detail = parsed?.detail;
+    if (typeof detail === "string") return detail;
+    if (Array.isArray(detail) && detail.length > 0) {
+      const first = detail[0];
+      if (first?.loc?.includes("email")) return "メールアドレスの形式が正しくありません";
+      if (first?.loc?.includes("password")) return "パスワードを確認してください";
+      return "入力内容に誤りがあります";
+    }
+    if (typeof detail === "object" && detail !== null) {
+      return "入力内容に誤りがあります";
+    }
+  } catch {
+    // JSON でない場合はそのまま本文を返す
+  }
+  return body || "通信に失敗しました";
+}
+
+async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const headers: Record<string, string> = {
+    ...(options.headers as Record<string, string>),
+  };
+
+  const isFormData = options.body instanceof FormData;
+  if (!isFormData && !headers["Content-Type"]) {
+    headers["Content-Type"] = "application/json";
+  }
+
+  const token = localStorage.getItem("token");
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(friendlyError(body, res.status, path));
+  }
+  if (res.status === 204) {
+    return undefined as T;
+  }
+  return res.json() as Promise<T>;
+}
+
+export interface User {
+  id: string;
+  email: string;
+  display_name: string | null;
+}
+
+export interface TokenResponse {
+  access_token: string;
+  token_type: string;
+}
+
+export interface Child {
+  id: string;
+  name: string;
+  birth_date: string | null;
+  allergies: { id: string; ingredient: string }[];
+  preferences: { id: string; ingredient: string; mode: string }[];
+}
+
+export interface NurseryMenu {
+  id: string;
+  date: string;
+  menu_text: string;
+  ingredients: Record<string, unknown>;
+}
+
+export interface SuggestedMeal {
+  id: string;
+  date: string;
+  menu_text: string;
+  ingredients: Record<string, unknown>;
+}
+
+export interface GenerateResponse {
+  meals: SuggestedMeal[];
+}
+
+export interface ShoppingItem {
+  id?: string;
+  name: string;
+  quantity?: string | null;
+  unit?: string;
+  needed?: string;
+  source_recipes?: string[];
+}
+
+export interface ShoppingList {
+  items: ShoppingItem[];
+  generated_at: string;
+}
 
 export interface Recipe {
   id: string;
-  title: string;
-  description: string | null;
-  category: string;
-  ingredients: string[];
-  instructions: string[];
-  cooking_time_minutes: number | null;
-  servings: number | null;
-  image_url: string | null;
-  source_url: string | null;
-  tags: string[];
-  created_at: string;
-  is_public: boolean;
+  name: string;
+  meal_type: string;
+  ingredients: { name: string; quantity?: string; unit?: string }[];
+  instructions: string;
+  cook_time_minutes?: number | null;
 }
 
-export const RecipeCategory = {
-  MAIN_DISH: 'main_dish',
-  SIDE_DISH: 'side_dish',
-  SOUP: 'soup',
-  RICE: 'rice',
-  NOODLE: 'noodle',
-  DESSERT: 'dessert',
-  OTHER: 'other',
-} as const;
-
-export type RecipeCategoryValue = (typeof RecipeCategory)[keyof typeof RecipeCategory];
+export interface RecipeSearchParams {
+  keyword?: string;
+  meal_type?: string;
+  ingredient?: string;
+  max_cook_time?: number;
+  page?: number;
+  per_page?: number;
+}
 
 export interface RecipeSearchResponse {
   recipes: Recipe[];
@@ -36,65 +134,136 @@ export interface RecipeSearchResponse {
   total_pages: number;
 }
 
-export interface RecipeSearchParams {
-  keyword?: string;
-  category?: string;
-  ingredients?: string[];
-  tags?: string[];
-  max_cooking_time?: number;
-  page?: number;
-  per_page?: number;
-}
-
-class ApiClient {
-  private baseUrl: string;
-
-  constructor(baseUrl: string = API_BASE_URL) {
-    this.baseUrl = baseUrl;
-  }
-
-  getBaseUrl(): string {
-    return this.baseUrl;
-  }
-
-  private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
-    const url = `${this.baseUrl}${endpoint}`;
-    const response = await fetch(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options?.headers,
-      },
-      ...options,
+const realApi = {
+  register(email: string, password: string, displayName?: string) {
+    return request<TokenResponse>("/auth/register", {
+      method: "POST",
+      body: JSON.stringify({ email, password, display_name: displayName }),
     });
+  },
+  login(email: string, password: string) {
+    return request<TokenResponse>("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    });
+  },
+  me() {
+    return request<User>("/auth/me");
+  },
+  updateMe(payload: { display_name?: string; password?: string }) {
+    return request<User>("/auth/me", {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+  },
+  listChildren() {
+    return request<Child[]>("/children");
+  },
+  createChild(payload: Omit<Child, "id">) {
+    return request<Child>("/children", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+  updateChild(
+    childId: string,
+    payload: { name?: string; birth_date?: string | null },
+  ) {
+    return request<Child>(`/children/${childId}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+  },
+  deleteChild(childId: string) {
+    return request<void>(`/children/${childId}`, { method: "DELETE" });
+  },
+  addAllergy(childId: string, ingredient: string) {
+    return request<Child>(`/children/${childId}/allergies`, {
+      method: "POST",
+      body: JSON.stringify({ ingredient }),
+    });
+  },
+  deleteAllergy(childId: string, allergyId: string) {
+    return request<Child>(`/children/${childId}/allergies/${allergyId}`, {
+      method: "DELETE",
+    });
+  },
+  addPreference(childId: string, ingredient: string, mode: string) {
+    return request<Child>(`/children/${childId}/preferences`, {
+      method: "POST",
+      body: JSON.stringify({ ingredient, mode }),
+    });
+  },
+  deletePreference(childId: string, preferenceId: string) {
+    return request<Child>(`/children/${childId}/preferences/${preferenceId}`, {
+      method: "DELETE",
+    });
+  },
+  listMenus() {
+    return request<NurseryMenu[]>("/menus");
+  },
+  uploadMenu(file: File) {
+    const formData = new FormData();
+    formData.append("file", file);
+    return request<NurseryMenu>("/menus/upload", {
+      method: "POST",
+      body: formData,
+    });
+  },
+  listRecipes() {
+    return request<Recipe[]>("/recipe-master");
+  },
+  searchRecipes(params: RecipeSearchParams = {}) {
+    const sp = new URLSearchParams();
+    if (params.keyword) sp.set("keyword", params.keyword);
+    if (params.meal_type) sp.set("meal_type", params.meal_type);
+    if (params.ingredient) sp.set("ingredient", params.ingredient);
+    if (params.max_cook_time)
+      sp.set("max_cook_time", String(params.max_cook_time));
+    if (params.page) sp.set("page", String(params.page));
+    if (params.per_page) sp.set("per_page", String(params.per_page));
+    const qs = sp.toString();
+    return request<RecipeSearchResponse>(
+      `/recipe-master/search${qs ? `?${qs}` : ""}`,
+    );
+  },
+  getRecipe(recipeId: string) {
+    return request<Recipe>(`/recipe-master/${recipeId}`);
+  },
+  listMealRecipes() {
+    return request<SuggestedMeal[]>("/recipes");
+  },
+  generateRecipe(childId: string, menuDate: string, days = 7) {
+    return request<GenerateResponse>("/recipes/generate", {
+      method: "POST",
+      body: JSON.stringify({ child_id: childId, menu_date: menuDate, days }),
+    });
+  },
+  getShoppingList() {
+    return request<ShoppingList>("/shopping/list");
+  },
+  listInventory() {
+    return request<ShoppingItem[]>("/shopping/inventory");
+  },
+  addInventory(name: string, quantity?: string) {
+    return request<ShoppingItem>("/shopping/inventory", {
+      method: "POST",
+      body: JSON.stringify({ name, quantity }),
+    });
+  },
+  deleteInventory(id: string) {
+    return request<void>(`/shopping/inventory/${id}`, { method: "DELETE" });
+  },
+  submitFeedback(rating: number | null, comment: string) {
+    return request<{ id: string; rating: number | null; comment: string }>(
+      "/feedback",
+      {
+        method: "POST",
+        body: JSON.stringify({ rating, comment }),
+      },
+    );
+  },
+};
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ detail: 'An error occurred' }));
-      throw new Error(error.detail || `HTTP error! status: ${response.status}`);
-    }
-
-    return response.json();
-  }
-
-  async searchRecipes(params: RecipeSearchParams = {}): Promise<RecipeSearchResponse> {
-    const searchParams = new URLSearchParams();
-
-    if (params.keyword) searchParams.append('keyword', params.keyword);
-    if (params.category) searchParams.append('category', params.category);
-    if (params.ingredients)
-      params.ingredients.forEach((i) => searchParams.append('ingredients', i));
-    if (params.tags) params.tags.forEach((t) => searchParams.append('tags', t));
-    if (params.max_cooking_time)
-      searchParams.append('max_cooking_time', params.max_cooking_time.toString());
-    if (params.page) searchParams.append('page', params.page.toString());
-    if (params.per_page) searchParams.append('per_page', params.per_page.toString());
-
-    return this.request<RecipeSearchResponse>(`/recipes?${searchParams.toString()}`);
-  }
-
-  async getRecipe(id: string): Promise<Recipe> {
-    return this.request<Recipe>(`/recipes/${id}`);
-  }
-}
-
-export { ApiClient };
-export const apiClient = new ApiClient();
+// 常時バックエンド API を利用する（デモモードは廃止）
+export const api = realApi;

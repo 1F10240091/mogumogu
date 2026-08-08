@@ -1,84 +1,40 @@
-# Dependencies
-node_modules
-.pnp
-.pnp.js
-
-# Testing
-coverage
-.nyc_output
-
-# Next.js
+# --- Node.js ---
+node_modules/
+dist/
 .next/
 out/
-build
-
-# Production
-dist
-
-# Misc
-.DS_Store
-*.pem
-
-# Debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Local env files
-.env*.local
-.env
-
-# Vercel
-.vercel
-
-# TypeScript
+build/
 *.tsbuildinfo
-next-env.d.ts
 
-# IDE
-.idea
-.vscode
-*.swp
-*.swo
-
-# Python
+# --- Python ---
 __pycache__/
 *.py[cod]
-*$py.class
-*.so
-.Python
-env/
+.venv/
 venv/
-ENV/
-.venv
-pip-log.txt
-pip-delete-this-directory.txt
-.tox/
-.coverage
-.coverage.*
-coverage.xml
-*.cover
-.hypothesis/
+env/
+*.egg-info/
 .pytest_cache/
 .mypy_cache/
-.dmypy.json
-dmypy.json
-.pyre/
 .ruff_cache/
 
-# Database
-*.db
-*.sqlite
-*.sqlite3
+# --- 環境変数 ---
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
 
-# Docker
-.docker/
-
-# Logs
-logs
-*.log
-
-# OS
+# --- IDE / OS ---
+.vscode/
+.idea/
+.DS_Store
 Thumbs.db
-ehthumbs.db
-Desktop.ini
+
+# --- ログ ---
+*.log
+logs/
+
+# --- テスト ---
+.test_*.db
+*.db
+*.sqlite3

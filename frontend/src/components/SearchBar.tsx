@@ -1,114 +1,98 @@
-'use client';
+"use client";
 
-import { ChangeEvent, FormEvent, useState } from 'react';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+
+const MEAL_TYPE_LABELS: Record<string, string> = {
+  main: "主菜",
+  side: "副菜",
+  soup: "汁物",
+  staple: "主食",
+};
 
 interface SearchBarProps {
-  onSearch: (params: {
+  initial?: {
     keyword?: string;
-    category?: string;
-    ingredients?: string[];
-    maxCookingTime?: number;
-  }) => void;
-  initialKeyword?: string;
-  initialCategory?: string;
+    meal_type?: string;
+    ingredient?: string;
+    max_cook_time?: number;
+  };
 }
 
-export function SearchBar({ onSearch, initialKeyword = '', initialCategory = '' }: SearchBarProps) {
-  const [keyword, setKeyword] = useState(initialKeyword);
-  const [category, setCategory] = useState(initialCategory);
-  const [ingredients, setIngredients] = useState('');
-  const [maxCookingTime, setMaxCookingTime] = useState('');
+export default function SearchBar({ initial = {} }: SearchBarProps) {
+  const router = useRouter();
+  const [keyword, setKeyword] = useState(initial.keyword ?? "");
+  const [mealType, setMealType] = useState(initial.meal_type ?? "");
+  const [ingredient, setIngredient] = useState(initial.ingredient ?? "");
+  const [maxCookTime, setMaxCookTime] = useState(
+    initial.max_cook_time ? String(initial.max_cook_time) : "",
+  );
 
-  const categories = [
-    { value: '', label: 'すべて' },
-    { value: 'main_dish', label: '主菜' },
-    { value: 'side_dish', label: '副菜' },
-    { value: 'soup', label: '汁物' },
-    { value: 'rice', label: 'ごはん' },
-    { value: 'noodle', label: '麺類' },
-    { value: 'dessert', label: 'デザート' },
-    { value: 'other', label: 'その他' },
-  ];
-
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSearch({
-      keyword: keyword || undefined,
-      category: category || undefined,
-      ingredients: ingredients ? ingredients.split(',').map((s) => s.trim()) : undefined,
-      maxCookingTime: maxCookingTime ? parseInt(maxCookingTime) : undefined,
-    });
+    const params = new URLSearchParams();
+    if (keyword.trim()) params.set("keyword", keyword.trim());
+    if (mealType) params.set("meal_type", mealType);
+    if (ingredient.trim()) params.set("ingredient", ingredient.trim());
+    if (maxCookTime) params.set("max_cook_time", maxCookTime);
+    router.push(`/recipe-search?${params.toString()}`);
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 p-4 bg-white rounded-lg shadow-sm border">
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="flex-1">
-          <label htmlFor="keyword" className="block text-sm font-medium text-gray-700 mb-1">
-            キーワード
-          </label>
-          <input
-            type="text"
-            id="keyword"
-            value={keyword}
-            onChange={(e: ChangeEvent<HTMLInputElement>) => setKeyword(e.target.value)}
-            placeholder="レシピ名、材料などで検索"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-          />
-        </div>
-        <div className="w-full sm:w-48">
-          <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
-            カテゴリ
-          </label>
-          <select
-            id="category"
-            value={category}
-            onChange={(e: ChangeEvent<HTMLSelectElement>) => setCategory(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-          >
-            {categories.map((cat) => (
-              <option key={cat.value} value={cat.value}>
-                {cat.label}
-              </option>
-            ))}
-          </select>
-        </div>
+    <form
+      className="card search-form"
+      onSubmit={handleSubmit}
+      aria-label="レシピ検索"
+    >
+      <div className="search-form__field">
+        <label htmlFor="search-keyword">キーワード</label>
+        <input
+          id="search-keyword"
+          type="text"
+          value={keyword}
+          onChange={(e) => setKeyword(e.target.value)}
+          placeholder="レシピ名や作り方で検索"
+        />
       </div>
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="flex-1">
-          <label htmlFor="ingredients" className="block text-sm font-medium text-gray-700 mb-1">
-            材料（カンマ区切り）
-          </label>
-          <input
-            type="text"
-            id="ingredients"
-            value={ingredients}
-            onChange={(e: ChangeEvent<HTMLInputElement>) => setIngredients(e.target.value)}
-            placeholder="例: にんじん, 玉ねぎ, 豚肉"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-          />
-        </div>
-        <div className="w-full sm:w-48">
-          <label htmlFor="maxCookingTime" className="block text-sm font-medium text-gray-700 mb-1">
-            調理時間（分以内）
-          </label>
-          <input
-            type="number"
-            id="maxCookingTime"
-            value={maxCookingTime}
-            onChange={(e: ChangeEvent<HTMLInputElement>) => setMaxCookingTime(e.target.value)}
-            placeholder="例: 30"
-            min="1"
-            max="180"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-          />
-        </div>
-      </div>
-      <div className="flex justify-end pt-2">
-        <button
-          type="submit"
-          className="px-6 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition-colors"
+      <div className="search-form__field">
+        <label htmlFor="search-meal-type">カテゴリ</label>
+        <select
+          id="search-meal-type"
+          value={mealType}
+          onChange={(e) => setMealType(e.target.value)}
         >
+          <option value="">すべて</option>
+          {Object.entries(MEAL_TYPE_LABELS).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="search-form__field">
+        <label htmlFor="search-ingredient">材料</label>
+        <input
+          id="search-ingredient"
+          type="text"
+          value={ingredient}
+          onChange={(e) => setIngredient(e.target.value)}
+          placeholder="例: にんじん, 豚肉"
+        />
+      </div>
+      <div className="search-form__field">
+        <label htmlFor="search-max-time">調理時間（分以内）</label>
+        <input
+          id="search-max-time"
+          type="number"
+          min={1}
+          max={180}
+          value={maxCookTime}
+          onChange={(e) => setMaxCookTime(e.target.value)}
+          placeholder="例: 30"
+        />
+      </div>
+      <div className="search-form__actions">
+        <button type="submit" className="button">
           検索
         </button>
       </div>

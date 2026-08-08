@@ -1,50 +1,60 @@
-import Link from 'next/link';
+import Link from "next/link";
+import styles from "./page.module.css";
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-gradient-to-b from-orange-50 to-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <section className="text-center mb-16">
-          <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">もぐもぐ</h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-8">
-            保育園の献立を活かした家庭の夕食を自動提案します。
-            <br />
-            離乳食・幼児食のレシピを検索してみましょう。
+    <div className={styles.page}>
+      <header className={styles.header}>
+        <div className={styles.headerInner}>
+          <span className={styles.logo}>MoguMogu</span>
+          <nav className={styles.nav}>
+            <Link href="/recipe-search">レシピ検索</Link>
+            <Link href="/login">ログイン</Link>
+            <Link href="/register" className={styles.registerLink}>
+              新規登録
+            </Link>
+          </nav>
+        </div>
+      </header>
+
+      <main className={styles.main}>
+        <section className={styles.hero}>
+          <h1 className={styles.title}>毎日の夕食づくり、もう悩まない。</h1>
+          <p className={styles.subtitle}>
+            保育園の献立表を読み取り、アレルギー・好き嫌い・冷蔵庫の在庫を考慮した
+            夕食献立を AI が自動提案します。
           </p>
-          <Link
-            href="/recipes"
-            className="inline-flex items-center px-8 py-3 bg-orange-600 text-white font-medium rounded-lg hover:bg-orange-700 transition-colors"
-          >
-            レシピを探す
+          <Link href="/register" className={styles.cta}>
+            はじめる
           </Link>
         </section>
 
-        <section className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-4xl mx-auto">
-          {[
-            {
-              title: 'かんたん検索',
-              description:
-                '材料やキーワード、調理時間で絞り込んでお気に入りのレシピを見つけられます。',
-            },
-            {
-              title: 'カテゴリ別',
-              description: '主菜・副菜・汁物・ごはんなど、食べたいジャンルから選べます。',
-            },
-            {
-              title: '子ども向け',
-              description: '離乳食・幼児食にぴったりの、やさしい味付けのレシピがそろっています。',
-            },
-          ].map((feature) => (
-            <div
-              key={feature.title}
-              className="bg-white p-6 rounded-xl shadow-sm border border-gray-100"
-            >
-              <h2 className="text-lg font-semibold text-gray-900 mb-2">{feature.title}</h2>
-              <p className="text-gray-600">{feature.description}</p>
+        <section className={styles.features}>
+          <h2 className={styles.sectionTitle}>できること</h2>
+          <div className={styles.grid}>
+            <div className={styles.feature}>
+              <h3>献立表の OCR 読み取り</h3>
+              <p>保育園から配布された献立表 PDF を読み込み、即座にデジタルデータへ変換。</p>
             </div>
-          ))}
+            <div className={styles.feature}>
+              <h3>AI 献立自動提案</h3>
+              <p>園の昼食と食材が重複せず、在庫を活かした夜ご飯を自動で決定。</p>
+            </div>
+            <div className={styles.feature}>
+              <h3>アレルギー・好き嫌い管理</h3>
+              <p>子どもの食事情報を一元管理し、安全でストレスのない食事管理の土台を提供。</p>
+            </div>
+            <div className={styles.feature}>
+              <h3>スマートにお買い物</h3>
+              <p>不足食材リストを自動生成し、買い物の負担を削減。</p>
+            </div>
+          </div>
         </section>
-      </div>
-    </main>
+      </main>
+
+      <footer className={styles.footer}>
+        <p>MoguMogu — 保育園児の親向け献立自動生成アプリ</p>
+      </footer>
+    </div>
   );
 }

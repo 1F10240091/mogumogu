@@ -1,4 +1,4 @@
-# スキャン PDF（画像化して AI OCR に渡す）用の軽量依存。
-# 画像 OCR 本体は Gemini（OpenAI 互換 API）を利用するため、easyocr / PyTorch は不要。
-# インストール: pip install -r requirements-ocr.txt
+# Lightweight dependency for scan PDFs (renders pages to images for AI OCR).
+# The OCR itself uses Gemini (OpenAI-compatible API); easyocr / PyTorch not needed.
+# Install with: pip install -r requirements-ocr.txt
 pypdfium2>=4.30.0

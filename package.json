@@ -1,40 +1,27 @@
 {
-  "name": "mogumogu",
-  "version": "1.0.0",
+  "name": "hoiku-recipe",
+  "version": "0.1.0",
   "private": true,
+  "description": "保育園児の親向け献立自動生成アプリ",
   "workspaces": [
-    "frontend",
-    "backend"
+    "frontend"
   ],
   "scripts": {
-    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
-    "dev:frontend": "npm run dev --workspace=frontend",
-    "dev:backend": "npm run dev --workspace=backend",
-    "build": "npm run build --workspaces",
-    "build:frontend": "npm run build --workspace=frontend",
-    "build:backend": "npm run build --workspace=backend",
-    "lint": "npm run lint --workspaces",
-    "lint:frontend": "npm run lint --workspace=frontend",
-    "lint:backend": "npm run lint --workspace=backend",
-    "format": "npm run format --workspaces",
-    "format:frontend": "npm run format --workspace=frontend",
-    "format:backend": "npm run format --workspace=backend",
-    "typecheck": "npm run typecheck --workspaces",
-    "typecheck:frontend": "npm run typecheck --workspace=frontend",
-    "typecheck:backend": "npm run typecheck --workspace=backend",
-    "test": "npm run test --workspaces",
-    "test:frontend": "npm run test --workspace=frontend",
-    "test:backend": "npm run test --workspace=backend",
-    "test:e2e": "npm run test:e2e --workspace=frontend",
-    "prepare": "husky install"
+    "setup": "npm install && npm run setup:backend",
+    "setup:backend": "cd backend && py -3.12 -m venv .venv && .venv\\Scripts\\pip install -r requirements.txt && .venv\\Scripts\\pip install -r requirements-dev.txt",
+    "dev": "concurrently -k -n backend,frontend -c blue,green \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:frontend": "npm run dev --workspace frontend",
+    "dev:backend": "cd backend && .venv\\Scripts\\python -X utf8 -m uvicorn app.main:app --reload --port 8000",
+    "start:backend": "scripts\\start-backend.bat",
+    "start:frontend": "scripts\\start-frontend.bat",
+    "build": "npm run build --workspace frontend",
+    "lint": "npm run lint --workspace frontend",
+    "test": "cd backend && .venv\\Scripts\\python -X utf8 -m pytest tests/ -q"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2",
-    "husky": "^9.1.7",
-    "lint-staged": "^15.2.2"
+    "concurrently": "^9.0.0"
   },
   "engines": {
-    "node": ">=20.0.0"
-  },
-  "packageManager": "npm@10.8.1"
+    "node": ">=18.17.0"
+  }
 }

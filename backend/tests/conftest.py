@@ -1,56 +1,50 @@
+"""pytest フィクスチャ。
+
+テスト用に一時 SQLite DB を使用し、テストごとにデータを分離する。
+"""
+
+import os
 import sys
+import uuid
 from pathlib import Path
 
 import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 
-sys.path.append(str(Path(__file__).resolve().parent.parent))
+# テスト用 DB パスを最優先で設定（リポジトリ直下の一時領域に置く）
+TEST_DB = Path(__file__).resolve().parent.parent / ".test_hoiku_recipe.db"
+os.environ["DATABASE_URL"] = f"sqlite:///{TEST_DB}"
+os.environ["AI_API_KEY"] = ""  # テストではルールベースを使用
+os.environ["RATE_LIMIT_ENABLED"] = "false"  # テストではレート制限を無効化（専用テストで検証）
 
-from app.database import get_db
-from app.main import app
-from app.models import Base
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from fastapi.testclient import TestClient  # noqa: E402
+
+from app.database import Base, SessionLocal, engine  # noqa: E402
+from app.main import app  # noqa: E402
+from app.services.seed import seed_recipes  # noqa: E402
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def client():
-    engine = create_engine(
-        "sqlite://",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    session_factory = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    Base.metadata.create_all(bind=engine)
-
-    def override_get_db():
-        db = session_factory()
-        try:
-            yield db
-        finally:
-            db.close()
-
-    app.dependency_overrides[get_db] = override_get_db
-    with TestClient(app) as test_client:
-        yield test_client
-    app.dependency_overrides.clear()
     Base.metadata.drop_all(bind=engine)
-
-
-@pytest.fixture()
-def db_session():
-    engine = create_engine(
-        "sqlite://",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    session_factory = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     Base.metadata.create_all(bind=engine)
+    with SessionLocal() as db:
+        seed_recipes(db)
+    with TestClient(app) as c:
+        yield c
 
-    session = session_factory()
-    try:
-        yield session
-    finally:
-        session.close()
-        Base.metadata.drop_all(bind=engine)
+
+@pytest.fixture
+def auth_client(client):
+    """一意メールで登録済みユーザーのトークンを付与したクライアントを返す。
+
+    セッション共有の client はヘッダを汚染しないよう、専用の TestClient を作る。
+    """
+    email = f"user-{uuid.uuid4().hex[:12]}@example.com"
+    res = TestClient(app)
+    r = res.post("/api/v1/auth/register", json={"email": email, "password": "password123"})
+    assert r.status_code == 201, r.text
+    token = r.json()["access_token"]
+    res.headers.update({"Authorization": f"Bearer {token}"})
+    return res

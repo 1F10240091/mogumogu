@@ -1,9 +1,16 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from "next";
+import "./globals.css";
 
 export const metadata: Metadata = {
-  title: 'もぐもぐ - 離乳食・幼児食レシピ検索',
+  title: "MoguMogu | 保育園児の親向け献立自動生成",
   description:
-    '保育園の献立を活かした家庭の夕食を自動提案します。離乳食・幼児食のレシピを検索できます。',
+    "保育園の献立表を読み取り、アレルギー・好き嫌い・冷蔵庫の在庫を考慮した夕食献立を AI が自動提案します。",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#f59e0b",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

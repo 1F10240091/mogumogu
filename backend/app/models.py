@@ -1,112 +1,128 @@
+"""データベースモデル定義。"""
+
 import uuid
 from datetime import date, datetime
-from enum import Enum as PyEnum
 
-from sqlalchemy import Enum, ForeignKey, MetaData, String, Text, Uuid, func
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-from sqlalchemy.types import DateTime
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, JSON, Index, Integer, String, Text
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-naming_convention = {
-    "ix": "ix_%(column_0_label)s",
-    "uq": "uq_%(table_name)s_%(column_0_name)s",
-    "ck": "ck_%(table_name)s_%(constraint_name)s",
-    "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
-    "pk": "pk_%(table_name)s",
-}
+from app.database import Base
 
 
-def new_uuid() -> uuid.UUID:
-    return uuid.uuid4()
+def generate_uuid() -> str:
+    return str(uuid.uuid4())
 
 
-class Base(DeclarativeBase):
-    metadata = MetaData(naming_convention=naming_convention)
-
-
-class TimestampMixin:
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-
-
-class User(Base, TimestampMixin):
+class User(Base):
     __tablename__ = "users"
 
-    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=new_uuid)
-    email: Mapped[str] = mapped_column(String, unique=True, index=True)
-    hashed_password: Mapped[str] = mapped_column(String)
-    display_name: Mapped[str] = mapped_column(String)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
+    hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
+    display_name: Mapped[str] = mapped_column(String(100), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
-    children: Mapped[list["Child"]] = relationship(
-        "Child", back_populates="user", cascade="all, delete-orphan"
-    )
+    children: Mapped[list["Child"]] = relationship(back_populates="user")
 
 
-class Child(Base, TimestampMixin):
+class Child(Base):
     __tablename__ = "children"
 
-    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=new_uuid)
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("users.id", ondelete="CASCADE"), index=True
-    )
-    name: Mapped[str] = mapped_column(String)
-    birth_date: Mapped[date | None] = mapped_column()
-    gender: Mapped[str | None] = mapped_column(String)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    birth_date: Mapped[date] = mapped_column(Date, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
-    user: Mapped["User"] = relationship("User", back_populates="children")
-    allergies: Mapped[list["Allergy"]] = relationship(
-        "Allergy", back_populates="child", cascade="all, delete-orphan"
-    )
-    preferences: Mapped[list["Preference"]] = relationship(
-        "Preference", back_populates="child", cascade="all, delete-orphan"
-    )
+    user: Mapped[User] = relationship(back_populates="children")
+    allergies: Mapped[list["Allergy"]] = relationship(back_populates="child", cascade="all, delete-orphan")
+    preferences: Mapped[list["Preference"]] = relationship(back_populates="child", cascade="all, delete-orphan")
 
 
 class Allergy(Base):
     __tablename__ = "allergies"
 
-    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=new_uuid)
-    child_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("children.id", ondelete="CASCADE"), index=True
-    )
-    ingredient: Mapped[str] = mapped_column(String)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    child_id: Mapped[str] = mapped_column(ForeignKey("children.id"), index=True, nullable=False)
+    ingredient: Mapped[str] = mapped_column(String(100), nullable=False)
 
-    child: Mapped["Child"] = relationship("Child", back_populates="allergies")
+    child: Mapped[Child] = relationship(back_populates="allergies")
 
 
 class Preference(Base):
     __tablename__ = "preferences"
 
-    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=new_uuid)
-    child_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("children.id", ondelete="CASCADE"), index=True
-    )
-    ingredient: Mapped[str] = mapped_column(String)
-    mode: Mapped[str] = mapped_column(String)  # exclude / improve
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    child_id: Mapped[str] = mapped_column(ForeignKey("children.id"), index=True, nullable=False)
+    ingredient: Mapped[str] = mapped_column(String(100), nullable=False)
+    mode: Mapped[str] = mapped_column(String(20), nullable=False, default="exclude")  # exclude | improve
 
-    child: Mapped["Child"] = relationship("Child", back_populates="preferences")
+    child: Mapped[Child] = relationship(back_populates="preferences")
 
 
-class RecipeCategory(str, PyEnum):
-    MAIN_DISH = "main_dish"
-    SIDE_DISH = "side_dish"
-    SOUP = "soup"
-    RICE = "rice"
-    NOODLE = "noodle"
-    DESSERT = "dessert"
-    OTHER = "other"
+class NurseryMenu(Base):
+    __tablename__ = "nursery_menus"
+    __table_args__ = (Index("ix_nursery_menus_user_date", "user_id", "date"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True, nullable=False)
+    date: Mapped[date] = mapped_column(Date, nullable=False)
+    menu_text: Mapped[str] = mapped_column(Text, nullable=False)
+    ingredients: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
-class Recipe(Base, TimestampMixin):
+class InventoryItem(Base):
+    __tablename__ = "inventory_items"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    quantity: Mapped[str] = mapped_column(String(50), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class SuggestedMeal(Base):
+    __tablename__ = "suggested_meals"
+    __table_args__ = (Index("ix_suggested_meals_user_date", "user_id", "date"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True, nullable=False)
+    date: Mapped[date] = mapped_column(Date, nullable=False)
+    menu_text: Mapped[str] = mapped_column(Text, nullable=False)
+    ingredients: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class Recipe(Base):
+    """料理レシピマスタ（全ユーザー共通）。
+
+    使用食品（ingredients）と作り方（instructions）をセットで保持する。
+    - ingredients: [{name, quantity, unit}] → アレルゲン判定・買い物リスト集計に使用
+    - instructions: 作り方手順 → 保護者向け表示に使用
+    """
+
     __tablename__ = "recipes"
 
-    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=new_uuid)
-    title: Mapped[str] = mapped_column(String, index=True)
-    description: Mapped[str | None] = mapped_column(Text)
-    category: Mapped[RecipeCategory] = mapped_column(Enum(RecipeCategory), index=True)
-    ingredients: Mapped[str] = mapped_column(Text)  # JSON string
-    instructions: Mapped[str] = mapped_column(Text)
-    cooking_time_minutes: Mapped[str | None] = mapped_column(String)
-    servings: Mapped[str | None] = mapped_column(String)
-    image_url: Mapped[str | None] = mapped_column(String)
-    source_url: Mapped[str | None] = mapped_column(String)
-    tags: Mapped[str | None] = mapped_column(Text)  # JSON string array
-    is_public: Mapped[str] = mapped_column(String, default="true")
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    name: Mapped[str] = mapped_column(String(100), unique=True, index=True, nullable=False)
+    meal_type: Mapped[str] = mapped_column(String(20), nullable=False, default="main")  # main | side | soup | staple
+    ingredients: Mapped[list] = mapped_column(JSON, default=list)
+    instructions: Mapped[str] = mapped_column(Text, default="")
+    cook_time_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class Feedback(Base):
+    """ユーザーテスト・学祭アンケート用のフィードバック。
+
+    アプリの使い勝手・改善要望を収集する。ログイン不要で投稿できる。
+    """
+
+    __tablename__ = "feedback"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    rating: Mapped[int | None] = mapped_column(Integer, nullable=True)  # 1〜5
+    comment: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

@@ -5,7 +5,7 @@
 ```
 ┌──────────────┐    HTTP    ┌──────────────┐          ┌──────────────┐
 │   Frontend   │ ─────────▶ │   Backend    │ ───────▶ │      AI      │
-│ (Next.js/TS) │ ◀───────── │  (FastAPI)   │ ◀─────── │ (Xiaomi MiMo)│
+│ (Next.js/TS) │ ◀───────── │  (FastAPI)   │ ◀─────── │ (Gemini)  │
 └──────────────┘   REST     └──────┬───────┘   API    └──────────────┘
                                    │
                             ┌──────▼───────┐
@@ -16,7 +16,7 @@
 
 - フロントエンドは Next.js + TypeScript。App Router によるページ構成。
 - バックエンドは FastAPI（Python）による REST API。
-- AI（Xiaomi MiMo）をバックエンドから呼び出し、献立を自動生成する。
+- AI（Gemini）をバックエンドから呼び出し、献立を自動生成する。
 - データベースは開発時 SQLite、本番は Supabase（PostgreSQL）。
 
 ## 2. API 設計
@@ -142,7 +142,7 @@
 1. 指定日の保育園献立（nursery_menus）を取得
 2. 対象児のアレルギー（allergies）・好き嫌い（preferences）を取得
 3. 冷蔵庫の在庫（inventory_items）を取得
-4. 上記をプロンプトに組み込み、Xiaomi MiMo に夕食献立を生成させる
+4. 上記をプロンプトに組み込み、Gemini に夕食献立を生成させる
 5. 制約：
    - 園の昼食と使用食材が重複しない
    - アレルギー食材を除外する

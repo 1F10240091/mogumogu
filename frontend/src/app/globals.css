@@ -1,16 +1,795 @@
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+:root {
+  --color-primary: #f59e0b;
+  --color-primary-dark: #d97706;
+  --color-primary-light: #fef3c7;
+  --color-primary-soft: #fff7e6;
+  --color-bg: #fdfaf4;
+  --color-surface: #ffffff;
+  --color-text: #1f2937;
+  --color-text-muted: #6b7280;
+  --color-muted: #6b7280;
+  --color-border: #e5e7eb;
+  --color-white: #ffffff;
+  --color-danger: #dc2626;
+  --color-danger-light: #fee2e2;
+  --color-success: #16a34a;
+  --color-success-light: #dcfce7;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --font: "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
 }
 
+* {
+  box-sizing: border-box;
+}
+
+html,
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Meiryo', sans-serif;
-  color: #333;
-  background: #fff;
+  padding: 0;
+  margin: 0;
+  font-family: var(--font);
+  color: var(--color-text);
+  background: var(--color-bg);
 }
 
 a {
   color: inherit;
   text-decoration: none;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  margin-top: 0;
+  line-height: 1.4;
+}
+
+h1 {
+  font-size: 26px;
+}
+
+h2 {
+  font-size: 20px;
+}
+
+h3 {
+  font-size: 16px;
+}
+
+/* --- レイアウト --- */
+.container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.main {
+  min-height: 100vh;
+}
+
+/* --- ページ見出し --- */
+.page-header {
+  padding: 32px 0 8px;
+}
+
+.page-header__title {
+  margin-bottom: 4px;
+}
+
+.page-header__subtitle {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 15px;
+}
+
+/* --- ボタン --- */
+.button {
+  display: inline-block;
+  padding: 12px 24px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--color-primary);
+  color: var(--color-white);
+  font-size: 15px;
+  font-weight: bold;
+  cursor: pointer;
+  text-align: center;
+  transition:
+    background 0.15s,
+    transform 0.1s,
+    box-shadow 0.15s;
+}
+
+.button:hover {
+  background: var(--color-primary-dark);
+  box-shadow: var(--shadow-md);
+}
+
+.button:active {
+  transform: translateY(1px);
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.button--secondary {
+  background: var(--color-white);
+  color: var(--color-primary-dark);
+  border: 1px solid var(--color-border);
+}
+
+.button--secondary:hover {
+  background: var(--color-bg);
+  box-shadow: none;
+}
+
+.button--danger {
+  background: var(--color-danger);
+}
+
+.button--danger:hover {
+  background: #b91c1c;
+}
+
+.button--sm {
+  padding: 8px 14px;
+  font-size: 13px;
+}
+
+.button--full {
+  width: 100%;
+}
+
+/* --- カード --- */
+.card {
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin: 16px 0;
+  box-shadow: var(--shadow-sm);
+}
+
+.card__title {
+  margin-bottom: 8px;
+}
+
+.card__text {
+  color: var(--color-muted);
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+/* --- フォーム --- */
+.form-field {
+  display: block;
+  margin-bottom: 16px;
+}
+
+.form-field__label {
+  display: block;
+  font-size: 13px;
+  font-weight: bold;
+  color: var(--color-muted);
+  margin-bottom: 6px;
+}
+
+.form-field__hint {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--color-muted);
+}
+
+.input,
+.select,
+.textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 15px;
+  font-family: inherit;
+  background: var(--color-white);
+  color: var(--color-text);
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.input:focus,
+.select:focus,
+.textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+.input-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.input-row .input {
+  flex: 1;
+  min-width: 160px;
+}
+
+.input-row .select {
+  flex: 1;
+  min-width: 120px;
+}
+
+/* --- アラート --- */
+.alert {
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  margin: 12px 0;
+  font-size: 14px;
+}
+
+.alert--error {
+  background: var(--color-danger-light);
+  color: var(--color-danger);
+}
+
+.alert--success {
+  background: var(--color-success-light);
+  color: var(--color-success);
+}
+
+/* --- リスト --- */
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.list__item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.list__item:last-child {
+  border-bottom: none;
+}
+
+.list__item-title {
+  font-weight: bold;
+  margin: 0 0 2px;
+}
+
+.list__item-text {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 13px;
+}
+
+.list__item-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* --- タグ/バッジ --- */
+.badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--color-primary-light);
+  color: var(--color-primary-dark);
+  font-size: 12px;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.badge--muted {
+  background: #f3f4f6;
+  color: var(--color-muted);
+}
+
+.tag-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* --- 空状態 / ローディング --- */
+.empty-state {
+  text-align: center;
+  padding: 40px 24px;
+  color: var(--color-muted);
+}
+
+.empty-state__title {
+  font-size: 18px;
+  font-weight: bold;
+  margin: 0 0 8px;
+  color: var(--color-text);
+}
+
+.empty-state p {
+  margin: 0 0 16px;
+}
+
+.loading {
+  padding: 40px;
+  text-align: center;
+  color: var(--color-muted);
+}
+
+/* --- テーブル --- */
+.table-responsive {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.table th {
+  background: var(--color-bg);
+  font-size: 13px;
+  color: var(--color-muted);
+}
+
+.table tr:last-child td {
+  border-bottom: none;
+}
+
+/* --- 認証ページ（ログイン/新規登録） --- */
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  background: linear-gradient(
+    180deg,
+    var(--color-primary-light) 0%,
+    var(--color-bg) 60%
+  );
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 400px;
+  background: var(--color-white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--color-border);
+  padding: 32px 28px;
+}
+
+.auth-card__title {
+  text-align: center;
+  margin-bottom: 8px;
+  font-size: 24px;
+}
+
+.auth-card__subtitle {
+  text-align: center;
+  color: var(--color-muted);
+  font-size: 14px;
+  margin: 0 0 24px;
+}
+
+.auth-card__footer {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 14px;
+  color: var(--color-muted);
+}
+
+/* --- アクセシビリティ --- */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 16px;
+  z-index: 100;
+  padding: 8px 16px;
+  background: var(--color-primary-dark);
+  color: var(--color-white);
+  border-radius: 0 0 8px 8px;
+  transition: top 0.2s;
+}
+
+.skip-link:focus {
+  top: 0;
+}
+
+/* --- 共通ナビゲーション --- */
+.app-nav {
+  background: var(--color-white);
+  border-bottom: 1px solid var(--color-border);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.app-nav__inner {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 56px;
+}
+
+.app-nav__brand {
+  font-weight: bold;
+  font-size: 18px;
+  color: var(--color-primary-dark);
+  white-space: nowrap;
+}
+
+.app-nav__list {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-x: auto;
+  flex: 1;
+}
+
+.app-nav__link {
+  display: block;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+.app-nav__link:hover {
+  background: var(--color-bg);
+}
+
+.app-nav__link--active {
+  background: var(--color-primary);
+  color: var(--color-white);
+  font-weight: bold;
+}
+
+/* --- レスポンシブ --- */
+@media (max-width: 640px) {
+  .container {
+    padding: 0 16px;
+  }
+
+  .app-nav__inner {
+    gap: 8px;
+    padding: 0 8px;
+  }
+
+  .app-nav__brand {
+    font-size: 15px;
+  }
+
+  .app-nav__link {
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+
+  .card {
+    padding: 16px;
+  }
+
+  .button {
+    width: 100%;
+    text-align: center;
+  }
+
+  table,
+  .table-responsive {
+    display: block;
+    overflow-x: auto;
+  }
+
+  .page-header {
+    padding: 24px 0 8px;
+  }
+}
+
+/* --- レシピ検索 --- */
+.search-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.search-form__field label {
+  display: block;
+  font-size: 13px;
+  font-weight: bold;
+  color: var(--color-muted);
+  margin-bottom: 4px;
+}
+
+.search-form input,
+.search-form select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  font-size: 14px;
+  background: var(--color-white);
+  color: var(--color-text);
+}
+
+.search-form input:focus,
+.search-form select:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+.search-form__actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.search-form__actions .button {
+  padding: 10px 20px;
+  font-size: 14px;
+}
+
+.recipe-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.recipe-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 16px;
+  transition:
+    box-shadow 0.2s,
+    transform 0.2s;
+}
+
+.recipe-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.recipe-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.recipe-card__badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--color-primary-light);
+  color: var(--color-primary-dark);
+  font-size: 12px;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.recipe-card__time {
+  font-size: 12px;
+  color: var(--color-muted);
+  white-space: nowrap;
+}
+
+.recipe-card h3 {
+  margin: 0 0 8px;
+  font-size: 17px;
+  color: var(--color-text);
+}
+
+.recipe-card__ingredients {
+  margin: 0 0 12px;
+  padding-left: 18px;
+  font-size: 13px;
+  color: var(--color-muted);
+  flex: 1;
+}
+
+.recipe-card__link {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: bold;
+  color: var(--color-primary-dark);
+}
+
+.recipe-detail__ingredients {
+  padding-left: 20px;
+  line-height: 1.8;
+}
+
+.recipe-detail__instructions ol {
+  padding-left: 20px;
+  line-height: 1.9;
+}
+
+.pagination {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+  margin-top: 24px;
+}
+
+.pagination button {
+  padding: 8px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-white);
+  color: var(--color-text);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.pagination button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pagination span {
+  font-size: 14px;
+  color: var(--color-muted);
+}
+
+/* --- レーティング（フィードバック） --- */
+.rating {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.rating__button {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-white);
+  color: var(--color-text);
+  font-size: 18px;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    transform 0.1s;
+}
+
+.rating__button:hover {
+  border-color: var(--color-primary);
+}
+
+.rating__button--active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-white);
+}
+
+/* --- アイコン風テキスト（ナビゲーション導線など） --- */
+.action-links {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 24px;
+}
+
+/* --- 献立内の料理名（レシピ詳細へのリンク） --- */
+.meal-dishes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 0;
+}
+
+.meal-dish {
+  margin: 0;
+}
+
+.meal-dish a {
+  text-decoration: none;
+}
+
+.meal-dish__label {
+  display: inline-block;
+  padding: 8px 16px;
+  border: 1px solid var(--color-primary-light);
+  border-radius: 999px;
+  background: var(--color-primary-light);
+  color: var(--color-primary-dark);
+  font-weight: 600;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.meal-dish a:hover .meal-dish__label,
+.meal-dish a:focus-visible .meal-dish__label {
+  background: var(--color-primary-soft);
+  border-color: var(--color-primary);
+}
+
+/* --- ダッシュボードのクイックアクション --- */
+.dashboard-quick {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.dashboard-quick__item {
+  display: block;
+  text-decoration: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.dashboard-quick__item:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.dashboard-quick__title {
+  margin: 0 0 6px;
+  color: var(--color-primary-dark);
+}
+
+.dashboard-quick__desc {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+.dashboard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* --- ページ内のセクション見出し --- */
+.section-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-bottom: 10px;
+  margin: 40px 0 16px;
+  border-bottom: 2px solid var(--color-primary-light);
+}
+
+.section-heading h2 {
+  margin: 0;
+  font-size: 20px;
 }

@@ -52,16 +52,22 @@
 
 ## クイックスタート
 
-### 0. 事前準備（git clone 後に初回のみ）
+この手順は、**まっさらな環境で clone → 起動まで検証済み**です（Windows、Node.js 18+ / Python 3.12）。
+
+### 0. 取得（git clone 初回のみ）
 
 ```bash
-# 1) フロントエンドの環境変数ファイルを作成（未作成の場合）
-cp frontend/.env.example frontend/.env.local
-# Windows: copy frontend\.env.example frontend\.env.local
+# おすすめのブランチ（レシピ検索・認証ガード済み）
+git clone -b feat/integrate-recipe-search https://github.com/1F10240091/mogumogu.git
+cd mogumogu
 
-# 2) バックエンドの環境変数ファイル（開発は任意。作らない場合はデフォルトで動作）
-#    cp backend/.env.example backend/.env   （Windows: copy backend\.env.example backend\.env）
+# フロントエンドの環境変数ファイルを作成
+copy frontend\.env.example frontend\.env.local
+# Windows 以外: cp frontend/.env.example frontend/.env.local
 ```
+
+> バックエンドの `backend/.env` は**開発時は任意**です。作らない場合はデフォルト値で動作します（本番デプロイ時のみ必須）。
+> 必要なら: `copy backend\.env.example backend\.env`
 
 ### 1. セットアップ
 
@@ -82,6 +88,7 @@ npm run dev
 - フロントエンド: http://localhost:3000
 - バックエンド API: http://localhost:8000 （Swagger UI: http://localhost:8000/docs）
 
+ブラウザで **http://localhost:3000** を開くとすぐ確認できます。
 レシピ検索・レシピ詳細はログイン不要でアクセスできます（バックエンドの読み取り専用 API を公開）。
 その他の機能（献立・買い物・フィードバックなど）はログイン後に利用できます。
 
